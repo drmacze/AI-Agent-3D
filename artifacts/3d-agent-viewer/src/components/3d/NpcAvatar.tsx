@@ -82,8 +82,12 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
   const bumpRef     = useRef(0);
   const bumpWasActive   = useRef(false);
   const npcChatTimer    = useRef(2 + Math.random() * 4);
-  const targetPos   = useMemo(() => new THREE.Vector3(agent.positionX, 0, agent.positionZ), [agent.positionX, agent.positionZ]);
-  const currentPos  = useRef(new THREE.Vector3(agent.positionX, 0, agent.positionZ));
+  const seatProgress    = useRef(0);
+  // Home = exact chair position for this NPC
+  const homeX = agent.positionX;
+  const homeZ = agent.positionZ <= 0 ? -1.8 : 3.2;
+  const targetPos   = useRef(new THREE.Vector3(homeX, 0, homeZ));
+  const currentPos  = useRef(new THREE.Vector3(homeX, 0, homeZ));
 
   const bubble = useGameStore(state => state.npcBubbles[agent.id] ?? null);
 
@@ -141,16 +145,19 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
         else if (roll < 0.90) liveStatus.current = "idle";
         else                  liveStatus.current = "stretch";
       }
-      statusTimer.current = 7 + Math.random() * 16;
+      // Working: long desk time. Other activities: shorter.
+      if (liveStatus.current === "working") {
+        statusTimer.current = 22 + Math.random() * 28; // 22–50s at desk
+      } else {
+        statusTimer.current = 6 + Math.random() * 10;  // 6–16s for breaks
+      }
 
       const newStatus = liveStatus.current;
       if (newStatus === "working") {
-        const homeX = agent.positionX;
-        const homeZ = agent.positionZ <= -2.5 ? -1.9 : agent.positionZ >= 2.5 ? 3.3 : agent.positionZ;
-        targetPos.set(homeX, 0, homeZ);
+        targetPos.current.set(homeX, 0, homeZ);
       } else if (newStatus !== wasStatus) {
         const spot = WANDER_SPOTS[Math.floor(Math.random() * WANDER_SPOTS.length)];
-        targetPos.set(spot[0], 0, spot[1]);
+        targetPos.current.set(spot[0], 0, spot[1]);
       }
     }
 
@@ -176,7 +183,7 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
       }
     }
 
-    currentPos.current.lerp(targetPos, Math.min(delta * 1.3, 0.055));
+    currentPos.current.lerp(targetPos.current, Math.min(delta * 1.3, 0.055));
     groupRef.current.position.copy(currentPos.current);
 
     if (bumpRef.current > 0.01) {
@@ -185,10 +192,20 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
       if (leftArmRef.current)  { leftArmRef.current.rotation.x  = -0.9 * bumpRef.current; leftArmRef.current.rotation.z  =  0.5 * bumpRef.current; }
     }
 
-    const moving = currentPos.current.distanceTo(targetPos) > 0.15;
+    const moving = currentPos.current.distanceTo(targetPos.current) > 0.15;
+
+    // Sitting progress
+    const isSitting = liveStatus.current === "working" && !moving;
+    seatProgress.current = THREE.MathUtils.lerp(seatProgress.current, isSitting ? 1 : 0, delta * (isSitting ? 2 : 3));
+    const s = seatProgress.current;
+
+    // Y position: raised when sitting, bob when walking, 0 when standing
+    if (!moving) {
+      groupRef.current.position.y = s * 0.30;
+    }
 
     if (moving) {
-      const dir = targetPos.clone().sub(currentPos.current);
+      const dir = targetPos.current.clone().sub(currentPos.current);
       if (dir.lengthSq() > 0.001) {
         const angle = Math.atan2(dir.x, dir.z);
         groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, angle, delta * 7);
@@ -221,19 +238,27 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
       groupRef.current.position.y = bob;
 
     } else if (status === "working") {
+      // Bend/straighten legs based on sitting progress
+      const legBend = s * -1.35;
+      if (leftLegRef.current)  leftLegRef.current.rotation.x  = THREE.MathUtils.lerp(leftLegRef.current.rotation.x,  legBend, delta * 5);
+      if (rightLegRef.current) rightLegRef.current.rotation.x = THREE.MathUtils.lerp(rightLegRef.current.rotation.x, legBend, delta * 5);
+
+      // Face toward desk (-Z) when seated
+      if (s > 0.4) {
+        groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, Math.PI, delta * 3);
+      }
+
       typingPhase.current += delta * 9;
       const tapL = Math.sin(typingPhase.current * 1.3) * 0.09;
       const tapR = Math.sin(typingPhase.current * 1.7 + 1.1) * 0.09;
-      if (leftArmRef.current)  { leftArmRef.current.rotation.x  = -0.5 + tapL; leftArmRef.current.rotation.z  = 0.28; }
-      if (rightArmRef.current) { rightArmRef.current.rotation.x = -0.5 + tapR; rightArmRef.current.rotation.z = -0.28; }
-      if (leftLegRef.current)  leftLegRef.current.rotation.x  = 0;
-      if (rightLegRef.current) rightLegRef.current.rotation.x = 0;
-      if (bodyRef.current)     bodyRef.current.rotation.x = 0.08;
+      const reach = -(0.40 + s * 0.12);
+      if (leftArmRef.current)  { leftArmRef.current.rotation.x  = THREE.MathUtils.lerp(leftArmRef.current.rotation.x,  reach + tapL, delta * 8); leftArmRef.current.rotation.z  = 0.28; }
+      if (rightArmRef.current) { rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, reach + tapR, delta * 8); rightArmRef.current.rotation.z = -0.28; }
+      if (bodyRef.current)     { bodyRef.current.rotation.x = 0.06 + s * 0.07; bodyRef.current.rotation.z = 0; }
       if (headRef.current) {
-        headRef.current.rotation.x = 0.10 + Math.sin(t * 0.6) * 0.04;
-        headRef.current.rotation.y = Math.sin(t * 0.25 + seed * 0.3) * 0.06;
+        headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, 0.10 + Math.sin(t * 0.6) * 0.04, delta * 4);
+        headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, Math.sin(t * 0.25 + seed * 0.3) * 0.06, delta * 3);
       }
-      groupRef.current.position.y = 0;
 
     } else if (status === "chatting") {
       const gesture = Math.sin(t * 1.5 + seed * 0.5) * 0.28;

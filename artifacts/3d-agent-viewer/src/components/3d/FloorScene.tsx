@@ -102,22 +102,29 @@ function SceneBackground() {
 }
 
 // ── Animated monitor screens ──────────────────────────────────────────────────
-function AnimatedMonitor({ pos, rot, accent }: { pos: [number,number,number]; rot: number; accent: string }) {
+function AnimatedMonitor({ pos, accent }: { pos: [number,number,number]; accent: string }) {
   const ref = useRef<THREE.Mesh>(null);
   const phase = useRef(Math.random() * Math.PI * 2);
   useFrame((state) => {
-    if (!ref.current) {
-      return;
-    }
+    if (!ref.current) return;
     const mat = ref.current.material as THREE.MeshLambertMaterial;
     mat.emissiveIntensity = 0.2 + Math.sin(state.clock.elapsedTime * 0.8 + phase.current) * 0.08;
   });
-  const monZ = pos[2] + (rot === 0 ? -0.18 : 0.18);
+  // Monitor always on the far side of desk (away from agent): pos[2] - 0.18
+  const monZ = pos[2] - 0.18;
   return (
-    <mesh ref={ref} position={[pos[0], 1.22, monZ]}>
-      <boxGeometry args={[0.55, 0.35, 0.03]} />
-      <meshLambertMaterial color="#0d1117" emissive={accent} emissiveIntensity={0.25} />
-    </mesh>
+    <group>
+      {/* Monitor screen */}
+      <mesh ref={ref} position={[pos[0], 1.22, monZ]}>
+        <boxGeometry args={[0.55, 0.35, 0.03]} />
+        <meshLambertMaterial color="#0d1117" emissive={accent} emissiveIntensity={0.25} />
+      </mesh>
+      {/* Screen bezel */}
+      <mesh position={[pos[0], 1.22, monZ - 0.005]}>
+        <boxGeometry args={[0.60, 0.40, 0.02]} />
+        <meshLambertMaterial color="#1a1a2a" />
+      </mesh>
+    </group>
   );
 }
 
@@ -318,33 +325,100 @@ function FloorProps({ floorId }: { floorId: FloorId }) {
       ))}
 
       {/* Desk stations */}
-      {DESK_STATIONS.map((station, i) => (
-        <group key={i}>
-          <mesh position={[station.pos[0], 0.74, station.pos[2]]}>
-            <boxGeometry args={[1.4, 0.07, 0.75]} /><meshLambertMaterial color="#c8a870" />
-          </mesh>
-          {/* Monitor stand */}
-          <mesh position={[station.pos[0], 0.84, station.pos[2] + (station.rot === 0 ? -0.18 : 0.18)]}>
-            <boxGeometry args={[0.06, 0.18, 0.06]} /><meshLambertMaterial color="#2a2a3a" />
-          </mesh>
-          {/* Animated monitor */}
-          <AnimatedMonitor pos={station.pos} rot={station.rot} accent={theme.accent} />
-          {/* Keyboard */}
-          <mesh position={[station.pos[0], 0.79, station.pos[2] + (station.rot === 0 ? 0.12 : -0.12)]}>
-            <boxGeometry args={[0.36, 0.02, 0.14]} /><meshLambertMaterial color="#1e2030" />
-          </mesh>
-          {/* Chair */}
-          <mesh position={[station.chairPos[0], 0.44, station.chairPos[2]]}>
-            <boxGeometry args={[0.44, 0.04, 0.44]} /><meshLambertMaterial color={theme.accent} />
-          </mesh>
-          <mesh position={[station.chairPos[0], 0.75, station.chairPos[2] + (station.rot === 0 ? 0.21 : -0.21)]}>
-            <boxGeometry args={[0.44, 0.56, 0.06]} /><meshLambertMaterial color={theme.accent} />
-          </mesh>
-          <mesh position={[station.chairPos[0], 0.22, station.chairPos[2]]}>
-            <cylinderGeometry args={[0.03, 0.03, 0.44, 5]} /><meshLambertMaterial color="#2a3a4a" />
-          </mesh>
-        </group>
-      ))}
+      {DESK_STATIONS.map((station, i) => {
+        const dx = station.pos[0];
+        const dz = station.pos[2];
+        const cx = station.chairPos[0];
+        const cz = station.chairPos[2];
+        // Monitor on FAR side of desk (away from agent), keyboard on NEAR side
+        const monZ = dz - 0.18;
+        const kbZ  = dz + 0.12;
+        // Chair back always behind agent (agent faces -Z, so back = +Z)
+        const backZ = cz + 0.21;
+        return (
+          <group key={i}>
+            {/* Desk top */}
+            <mesh position={[dx, 0.74, dz]}>
+              <boxGeometry args={[1.4, 0.07, 0.78]} /><meshLambertMaterial color="#c8a870" />
+            </mesh>
+            {/* Desk side panels */}
+            <mesh position={[dx - 0.68, 0.38, dz]}>
+              <boxGeometry args={[0.04, 0.76, 0.74]} /><meshLambertMaterial color="#b89860" />
+            </mesh>
+            <mesh position={[dx + 0.68, 0.38, dz]}>
+              <boxGeometry args={[0.04, 0.76, 0.74]} /><meshLambertMaterial color="#b89860" />
+            </mesh>
+            {/* Monitor stand neck */}
+            <mesh position={[dx, 0.84, monZ]}>
+              <boxGeometry args={[0.055, 0.18, 0.055]} /><meshLambertMaterial color="#2a2a3a" />
+            </mesh>
+            {/* Monitor stand base */}
+            <mesh position={[dx, 0.78, monZ]}>
+              <boxGeometry args={[0.24, 0.02, 0.14]} /><meshLambertMaterial color="#2a2a3a" />
+            </mesh>
+            {/* Animated monitor */}
+            <AnimatedMonitor pos={station.pos} accent={theme.accent} />
+            {/* Keyboard */}
+            <mesh position={[dx, 0.785, kbZ]}>
+              <boxGeometry args={[0.38, 0.018, 0.15]} /><meshLambertMaterial color="#1e2030" />
+            </mesh>
+            {/* Keyboard keys strip */}
+            <mesh position={[dx, 0.796, kbZ]}>
+              <boxGeometry args={[0.34, 0.008, 0.12]} /><meshLambertMaterial color="#2a2e44" />
+            </mesh>
+            {/* Mouse */}
+            <mesh position={[dx + 0.27, 0.783, kbZ]}>
+              <boxGeometry args={[0.08, 0.016, 0.12]} /><meshLambertMaterial color="#28303a" />
+            </mesh>
+            {/* Desk item: mug */}
+            <mesh position={[dx - 0.45, 0.79, dz - 0.08]}>
+              <cylinderGeometry args={[0.035, 0.030, 0.08, 8]} /><meshLambertMaterial color="#e8e0d8" />
+            </mesh>
+
+            {/* ── Office Chair ── */}
+            {/* Seat shell */}
+            <mesh position={[cx, 0.44, cz]}>
+              <boxGeometry args={[0.46, 0.06, 0.46]} /><meshLambertMaterial color="#2a3448" />
+            </mesh>
+            {/* Seat cushion */}
+            <mesh position={[cx, 0.485, cz]}>
+              <boxGeometry args={[0.42, 0.04, 0.42]} /><meshLambertMaterial color={theme.accent} />
+            </mesh>
+            {/* Back frame */}
+            <mesh position={[cx, 0.70, backZ]}>
+              <boxGeometry args={[0.44, 0.38, 0.06]} /><meshLambertMaterial color="#2a3448" />
+            </mesh>
+            {/* Back cushion */}
+            <mesh position={[cx, 0.70, backZ - 0.02]}>
+              <boxGeometry args={[0.40, 0.34, 0.04]} /><meshLambertMaterial color={theme.accent} />
+            </mesh>
+            {/* Left armrest */}
+            <mesh position={[cx - 0.24, 0.57, cz]}>
+              <boxGeometry args={[0.04, 0.05, 0.36]} /><meshLambertMaterial color="#2a3448" />
+            </mesh>
+            {/* Right armrest */}
+            <mesh position={[cx + 0.24, 0.57, cz]}>
+              <boxGeometry args={[0.04, 0.05, 0.36]} /><meshLambertMaterial color="#2a3448" />
+            </mesh>
+            {/* Gas lift pole */}
+            <mesh position={[cx, 0.22, cz]}>
+              <cylinderGeometry args={[0.034, 0.034, 0.44, 6]} /><meshLambertMaterial color="#3a4858" />
+            </mesh>
+            {/* Five-star base arms */}
+            {[0, 72, 144, 216, 288].map((deg, bi) => {
+              const rad = (deg * Math.PI) / 180;
+              return (
+                <mesh key={bi}
+                  position={[cx + Math.sin(rad) * 0.13, 0.045, cz + Math.cos(rad) * 0.13]}
+                  rotation={[0, -rad, 0]}>
+                  <boxGeometry args={[0.038, 0.038, 0.28]} />
+                  <meshLambertMaterial color="#3a4858" />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })}
 
       {/* Meeting table */}
       <group position={[7, 0, 1]}>
