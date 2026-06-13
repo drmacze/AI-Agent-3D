@@ -74,6 +74,8 @@ interface FloorContextType {
   openElevator: () => void;
   closeElevator: () => void;
   isRiding: boolean;
+  ridingFrom: FloorId | null;
+  ridingTo: FloorId | null;
   npcAgents: NpcAgent[];
   getNpcsByFloor: (floor: FloorId) => NpcAgent[];
 }
@@ -84,15 +86,21 @@ export function FloorProvider({ children }: { children: ReactNode }) {
   const [currentFloor, setCurrentFloor] = useState<FloorId>(1);
   const [isElevatorOpen, setElevatorOpen] = useState(false);
   const [isRiding, setIsRiding] = useState(false);
+  const [ridingFrom, setRidingFrom] = useState<FloorId | null>(null);
+  const [ridingTo, setRidingTo] = useState<FloorId | null>(null);
 
   const setFloor = useCallback((floor: FloorId) => {
     if (floor === currentFloor) { setElevatorOpen(false); return; }
+    setRidingFrom(currentFloor);
+    setRidingTo(floor);
     setIsRiding(true);
+    setElevatorOpen(false);
     setTimeout(() => {
       setCurrentFloor(floor);
       setIsRiding(false);
-      setElevatorOpen(false);
-    }, 1800);
+      setRidingFrom(null);
+      setRidingTo(null);
+    }, 2200);
   }, [currentFloor]);
 
   const getNpcsByFloor = useCallback((floor: FloorId) => {
@@ -107,6 +115,8 @@ export function FloorProvider({ children }: { children: ReactNode }) {
       openElevator: () => setElevatorOpen(true),
       closeElevator: () => setElevatorOpen(false),
       isRiding,
+      ridingFrom,
+      ridingTo,
       npcAgents: NPC_AGENTS,
       getNpcsByFloor,
     }}>
