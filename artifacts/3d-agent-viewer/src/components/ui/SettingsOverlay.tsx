@@ -129,15 +129,40 @@ export function SettingsOverlay() {
           {/* ── AI Provider tab ── */}
           {tab === "ai" && (
             <>
+              {/* Built-in hero card */}
+              <button
+                onClick={() => updateSettings({ apiProvider: "builtin" })}
+                className={`w-full rounded-xl text-left border-2 transition-all p-3 ${
+                  settings.apiProvider === "builtin"
+                    ? "border-emerald-500 bg-emerald-50"
+                    : "border-gray-200 hover:border-emerald-300 bg-white"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🤖</span>
+                    <div>
+                      <div className={`text-sm font-bold ${settings.apiProvider === "builtin" ? "text-emerald-700" : "text-gray-700"}`}>
+                        Built-in AI
+                      </div>
+                      <div className="text-[10px] text-gray-400">Context-aware agent responses</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                    FREE · No key
+                  </span>
+                </div>
+              </button>
+
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Provider</label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Or use an AI provider</label>
                 <div className="grid grid-cols-2 gap-2">
                   {([
                     { id: "openai",    label: "OpenAI",    sub: "GPT-4o mini" },
                     { id: "anthropic", label: "Anthropic",  sub: "Claude 3 Haiku" },
                     { id: "groq",      label: "Groq",       sub: "Llama 3.3 70B" },
                     { id: "kimi",      label: "Kimi 2.6",   sub: "Moonshot AI" },
-                    { id: "openclaw",  label: "OpenClaw",   sub: "No key needed" },
+                    { id: "openclaw",  label: "OpenClaw",   sub: "Self-hosted" },
                   ] as const).map(({ id, label, sub }) => (
                     <button key={id} onClick={() => updateSettings({ apiProvider: id })}
                       className={`py-2.5 px-3 rounded-xl text-left border-2 transition-all ${
@@ -150,7 +175,14 @@ export function SettingsOverlay() {
                 </div>
               </div>
 
-              {settings.apiProvider !== "openclaw" && (() => {
+              {settings.apiProvider === "builtin" && (
+                <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800 space-y-1">
+                  <p className="font-semibold">✅ Built-in AI active — no API key needed</p>
+                  <p className="text-emerald-700">Agents respond in-character using their role, current task, and personality. Works completely offline.</p>
+                </div>
+              )}
+
+              {(settings.apiProvider !== "openclaw" && settings.apiProvider !== "builtin") && (() => {
                 const cfg: Record<string, { placeholder: string; hint: string; link: string }> = {
                   openai:    { placeholder: "sk-...",      hint: "Get yours at",   link: "platform.openai.com" },
                   anthropic: { placeholder: "sk-ant-...",  hint: "Get yours at",   link: "console.anthropic.com" },

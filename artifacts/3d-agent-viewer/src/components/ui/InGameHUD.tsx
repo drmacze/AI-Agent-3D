@@ -1,5 +1,6 @@
 import { useFloor } from '@/context/FloorContext'
 import { useGameStore } from '@/store/gameStore'
+import { useGameTime } from '@/context/GameTimeContext'
 
 interface Props {
   nearNpcName: string | null
@@ -22,6 +23,56 @@ function ElevatorIcon() {
       <rect x="5" y="2" width="14" height="20" rx="2"/>
       <path d="M9 8l3-3 3 3"/><path d="M9 16l3 3 3-3"/>
     </svg>
+  )
+}
+
+const PHASE_ICONS: Record<string, string> = {
+  night:     '🌙',
+  dawn:      '🌅',
+  morning:   '☀️',
+  afternoon: '🌤️',
+  evening:   '🌆',
+  dusk:      '🌇',
+}
+
+const PHASE_COLORS: Record<string, { bg: string; border: string; text: string; sub: string }> = {
+  night:     { bg: 'rgba(20,25,60,0.82)',   border: 'rgba(100,130,255,0.22)', text: '#a0b4ff', sub: 'rgba(160,180,255,0.5)' },
+  dawn:      { bg: 'rgba(60,25,10,0.82)',   border: 'rgba(255,140,60,0.28)',  text: '#ffb070', sub: 'rgba(255,160,80,0.55)' },
+  morning:   { bg: 'rgba(10,30,55,0.78)',   border: 'rgba(180,220,255,0.22)', text: '#c8e8ff', sub: 'rgba(200,230,255,0.5)' },
+  afternoon: { bg: 'rgba(8,25,50,0.75)',    border: 'rgba(140,210,255,0.2)',  text: '#b0d8ff', sub: 'rgba(180,220,255,0.5)' },
+  evening:   { bg: 'rgba(55,20,5,0.82)',    border: 'rgba(255,120,40,0.28)',  text: '#ffaa60', sub: 'rgba(255,140,70,0.55)' },
+  dusk:      { bg: 'rgba(45,15,30,0.82)',   border: 'rgba(200,100,160,0.28)', text: '#e0a0c0', sub: 'rgba(210,130,170,0.5)' },
+}
+
+function GameClockHUD() {
+  const { timeString, phase } = useGameTime()
+  const colors = PHASE_COLORS[phase] ?? PHASE_COLORS.morning
+  const icon = PHASE_ICONS[phase] ?? '☀️'
+
+  return (
+    <div style={{
+      position: 'absolute', top: 12, right: 16, zIndex: 20, pointerEvents: 'none',
+    }}>
+      <div style={{
+        background: colors.bg,
+        border: `1px solid ${colors.border}`,
+        borderRadius: 14,
+        padding: '4px 11px 4px 9px',
+        backdropFilter: 'blur(12px)',
+        display: 'flex', alignItems: 'center', gap: 6,
+        boxShadow: '0 2px 12px rgba(0,0,0,0.25)',
+      }}>
+        <span style={{ fontSize: 14, lineHeight: 1, userSelect: 'none' }}>{icon}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: colors.text, letterSpacing: '-0.3px', lineHeight: 1.15, fontVariantNumeric: 'tabular-nums' }}>
+            {timeString}
+          </span>
+          <span style={{ fontSize: 9, color: colors.sub, textTransform: 'capitalize', letterSpacing: 0.8, lineHeight: 1 }}>
+            {phase}
+          </span>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -85,7 +136,7 @@ export function InGameHUD({ nearNpcName, onInteract, nearElevator, onElevatorInt
         </div>
       )}
 
-      {/* Top bar — floor + user */}
+      {/* Top-center bar — floor + user */}
       <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 20, pointerEvents: 'none' }}>
         <div style={{
           background: 'rgba(8,8,14,0.65)', borderRadius: 20, padding: '4px 13px',
@@ -99,6 +150,9 @@ export function InGameHUD({ nearNpcName, onInteract, nearElevator, onElevatorInt
           {user?.isDev && <span style={{ fontSize: 9.5, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 8, fontWeight: 600 }}>DEV</span>}
         </div>
       </div>
+
+      {/* Day/Night Clock — top right */}
+      <GameClockHUD />
 
       {/* Controls hint — desktop only */}
       <div className="hidden sm:flex" style={{ position: 'absolute', bottom: 20, right: 20, zIndex: 20, pointerEvents: 'none', flexDirection: 'column', gap: 3, alignItems: 'flex-end' }}>

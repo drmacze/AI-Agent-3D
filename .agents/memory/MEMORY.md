@@ -4,3 +4,4 @@
 - [Graphics settings in R3F](graphics-settings.md) — dpr is dynamic via Canvas prop; shadows/antialias require remount to fully apply; bloom is conditional render so instant.
 - [R3F graphics bugs fixed](r3f-graphics-bugs.md) — bufferAttribute args syntax, Bloom levels prop, world-space fullscreen overlays, floor z-fighting patterns.
 - [Kimi AI asset integration](kimi-assets.md) — PBR upgrade: meshPhysicalMaterial + smoothNoise GLSL in OfficeFloor; NpcAvatar uses same; Kimi ZIP at /tmp/kimi_assets but don't re-extract.
+- [Built-in AI provider](builtin-ai.md) — zero-apikey provider "builtin" is default; streamBuiltin() in chat.ts generates context-aware NPC responses from system-prompt; no external calls needed.

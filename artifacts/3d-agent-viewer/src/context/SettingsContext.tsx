@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { audioManager } from "@/lib/audioManager";
 
-export type ApiProvider = "openclaw" | "openai" | "anthropic" | "groq" | "kimi";
+export type ApiProvider = "builtin" | "openclaw" | "openai" | "anthropic" | "groq" | "kimi";
 export type GraphicsQuality = "low" | "medium" | "high" | "ultra";
 export type FpsLimit = 30 | 60 | 120 | 0;
 
@@ -39,7 +39,7 @@ interface SettingsContextType {
 
 const DEFAULT: Settings = {
   apiKey: "",
-  apiProvider: "openclaw",
+  apiProvider: "builtin",
   playerName: "You",
   playerColor: "#f59e0b",
   playerSkinTone: "#f4c39a",
@@ -109,7 +109,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const isOpenClaw = settings.apiProvider === "openclaw";
+  const noKeyNeeded = settings.apiProvider === "openclaw" || settings.apiProvider === "builtin";
 
   return (
     <SettingsContext.Provider value={{
@@ -118,8 +118,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       isSettingsOpen,
       openSettings: () => setSettingsOpen(true),
       closeSettings: () => setSettingsOpen(false),
-      hasApiKey: isOpenClaw
-        ? !!settings.openclawGatewayUrl.trim()
+      hasApiKey: noKeyNeeded
+        ? true
         : !!settings.apiKey.trim(),
     }}>
       {children}

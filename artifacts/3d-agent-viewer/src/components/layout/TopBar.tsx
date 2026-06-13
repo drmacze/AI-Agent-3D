@@ -19,7 +19,8 @@ export function TopBar() {
   const [location] = useLocation();
   const gameTime = useGameTime();
   const { openSettings, hasApiKey, settings } = useSettings();
-  const isOpenClaw = settings.apiProvider === "openclaw";
+  const isOpenClaw  = settings.apiProvider === "openclaw";
+  const isBuiltin   = settings.apiProvider === "builtin";
 
   return (
     <header className="h-12 border-b border-border bg-white/95 backdrop-blur-sm z-50 flex items-center justify-between px-4 sticky top-0 shadow-sm">
@@ -96,17 +97,19 @@ export function TopBar() {
         <button
           onClick={openSettings}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all hover:bg-gray-100 ${
-            isOpenClaw
-              ? "text-indigo-600"
-              : hasApiKey
-                ? "text-green-600"
-                : "text-amber-600 bg-amber-50 hover:bg-amber-100"
+            isBuiltin
+              ? "text-emerald-600"
+              : isOpenClaw
+                ? "text-indigo-600"
+                : hasApiKey
+                  ? "text-green-600"
+                  : "text-amber-600 bg-amber-50 hover:bg-amber-100"
           }`}
           title="Settings"
         >
           <Settings className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">
-            {isOpenClaw ? "OpenClaw" : hasApiKey ? "API Connected" : "Set API Key"}
+            {isBuiltin ? "Built-in AI" : isOpenClaw ? "OpenClaw" : hasApiKey ? "API Connected" : "Set API Key"}
           </span>
         </button>
       </div>
