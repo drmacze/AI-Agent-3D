@@ -76,8 +76,8 @@ export function AgentAvatar({ agent, isSelected, onClick }: Props) {
     if (!groupRef.current) return;
     const t = state.clock.elapsedTime;
 
-    // ── Smooth position lerp ──
-    currentPos.current.lerp(targetPos, Math.min(delta * 2.8, 1));
+    // ── Smooth position lerp (capped so agents visibly walk, not teleport) ──
+    currentPos.current.lerp(targetPos, Math.min(delta * 1.4, 0.055));
     groupRef.current.position.copy(currentPos.current);
     const dist = currentPos.current.distanceTo(targetPos);
     const isMoving = dist > 0.08;

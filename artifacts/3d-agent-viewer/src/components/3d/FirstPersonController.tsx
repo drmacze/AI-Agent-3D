@@ -31,10 +31,11 @@ interface Props {
   joystickLook: React.MutableRefObject<{ x: number; y: number }>
   jumpTrigger: React.MutableRefObject<boolean>
   onNearNpc?: (name: string | null, agentData?: unknown) => void
+  onNearElevator?: (near: boolean) => void
   npcPositions?: NpcPositionEntry[]
 }
 
-export function FirstPersonController({ joystickMove, joystickLook, jumpTrigger, onNearNpc, npcPositions }: Props) {
+export function FirstPersonController({ joystickMove, joystickLook, jumpTrigger, onNearNpc, onNearElevator, npcPositions }: Props) {
   const { camera, gl } = useThree()
   const { setNpcReaction } = useGameStore()
   const keys = useRef(new Set<string>())
@@ -44,7 +45,8 @@ export function FirstPersonController({ joystickMove, joystickLook, jumpTrigger,
   const pitch = useRef(-0.12)
   const pos = useRef(new THREE.Vector3(0, PLAYER_HEIGHT, 7))
   const locked = useRef(false)
-  const nearNpc = useRef<string | null>(null)
+  const nearNpc      = useRef<string | null>(null)
+  const nearElevator = useRef(false)
   const footstepTimer = useRef(0)
   const wasGrounded = useRef(true)
   const wasJumping = useRef(false)
@@ -188,6 +190,15 @@ export function FirstPersonController({ joystickMove, joystickLook, jumpTrigger,
       if (found !== nearNpc.current) {
         nearNpc.current = found
         onNearNpc(found, foundData)
+      }
+    }
+
+    // Elevator proximity check — elevator is near x=-13, door at x≈-11.86
+    if (onNearElevator) {
+      const nearElev = pos.current.x < -9.5 && Math.abs(pos.current.z) < 2.8
+      if (nearElev !== nearElevator.current) {
+        nearElevator.current = nearElev
+        onNearElevator(nearElev)
       }
     }
   })

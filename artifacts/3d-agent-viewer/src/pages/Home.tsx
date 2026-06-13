@@ -50,7 +50,8 @@ export default function Home() {
   const [rightOpen, setRightOpen] = useState(false);
   const [nearNpcName, setNearNpcName] = useState<string | null>(null);
   const [nearNpcData, setNearNpcData] = useState<unknown>(null);
-  const { currentFloor } = useFloor();
+  const [nearElevator, setNearElevator] = useState(false);
+  const { currentFloor, openElevator } = useFloor();
   const { gameState, setGameState } = useGameStore();
 
   // Collapse panels in FPS mode or on mobile
@@ -89,19 +90,22 @@ export default function Home() {
     setNearNpcName(name);
     setNearNpcData(agentData ?? null);
   }, []);
+  const handleNearElevator = useCallback((near: boolean) => setNearElevator(near), []);
   const handleInteract = useCallback(() => {
     if (nearNpcData) setChatTarget(nearNpcData as ChatTarget);
   }, [nearNpcData]);
+  const handleElevatorInteract = useCallback(() => openElevator(), [openElevator]);
 
   useEffect(() => {
     if (gameState !== "playing") return;
     const handler = (e: KeyboardEvent) => {
       if (e.code === "KeyE" && nearNpcData) handleInteract();
+      else if (e.code === "KeyE" && nearElevator) handleElevatorInteract();
       if (e.code === "Escape") document.exitPointerLock?.();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [gameState, nearNpcData, handleInteract]);
+  }, [gameState, nearNpcData, nearElevator, handleInteract, handleElevatorInteract]);
 
   return (
     <div className="absolute inset-0 bg-background w-full h-full flex overflow-hidden">
@@ -112,6 +116,7 @@ export default function Home() {
           selectedAgentId={selectedAgentId}
           onChatAgent={handleChatAgent}
           onNearNpc={handleNearNpc}
+          onNearElevator={handleNearElevator}
         />
       </div>
 
@@ -120,7 +125,12 @@ export default function Home() {
 
       {/* In-game HUD */}
       {gameState === "playing" && (
-        <InGameHUD nearNpcName={nearNpcName} onInteract={handleInteract} />
+        <InGameHUD
+          nearNpcName={nearNpcName}
+          onInteract={handleInteract}
+          nearElevator={nearElevator}
+          onElevatorInteract={handleElevatorInteract}
+        />
       )}
 
       {/* HUD overlay */}

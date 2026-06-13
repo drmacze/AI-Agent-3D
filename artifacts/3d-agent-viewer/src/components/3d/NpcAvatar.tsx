@@ -13,11 +13,16 @@ const SHOE_COLORS = ["#1a1212","#120e0e","#1e1408","#0e0e14","#1a120a"];
 
 function hash(n: number) { return ((Math.sin(n * 127.1) * 43758.5) % 1 + 1) % 1; }
 
-function getActivityEmoji(agent: NpcAgent): { emoji: string; label: string } {
+type LiveStatus = NpcAgent["status"] | "phone" | "stretch";
+
+function getActivityEmoji(agent: NpcAgent, status: LiveStatus): { emoji: string; label: string } {
+  if (status === "coffee")     return { emoji: "☕", label: "Coffee" };
+  if (status === "presenting") return { emoji: "📊", label: "Presenting" };
+  if (status === "chatting")   return { emoji: "💬", label: "Chatting" };
+  if (status === "phone")      return { emoji: "📱", label: "On Call" };
+  if (status === "stretch")    return { emoji: "🤸", label: "Stretching" };
+  if (status === "idle")       return { emoji: "💤", label: "Idle" };
   const t = agent.currentTask.toLowerCase();
-  if (agent.status === "coffee")     return { emoji: "☕", label: "Coffee" };
-  if (agent.status === "presenting") return { emoji: "📊", label: "Presenting" };
-  if (agent.status === "chatting")   return { emoji: "💬", label: "Chatting" };
   if (t.includes("design") || t.includes("ui")) return { emoji: "🎨", label: "Designing" };
   if (t.includes("code") || t.includes("build") || t.includes("develop")) return { emoji: "⌨️", label: "Coding" };
   if (t.includes("train") || t.includes("model") || t.includes("ml")) return { emoji: "🧠", label: "Training" };
@@ -28,7 +33,6 @@ function getActivityEmoji(agent: NpcAgent): { emoji: string; label: string } {
   if (t.includes("report") || t.includes("strat") || t.includes("budget")) return { emoji: "📈", label: "Planning" };
   if (t.includes("research") || t.includes("paper")) return { emoji: "🔬", label: "Researching" };
   if (t.includes("test") || t.includes("pen")) return { emoji: "🧪", label: "Testing" };
-  if (agent.status === "idle") return { emoji: "💤", label: "Idle" };
   return { emoji: "💼", label: "Working" };
 }
 
@@ -38,13 +42,13 @@ interface Props {
   onClick?: () => void;
 }
 
-// Dynamic NPC status that cycles over time
-function useDynamicStatus(initialStatus: NpcAgent["status"], seed: number) {
-  const statusRef = useRef(initialStatus);
-  const timerRef  = useRef(seed % 20 + 10);
-  const statuses: NpcAgent["status"][] = ["working", "working", "working", "chatting", "idle", "coffee", "presenting"];
-  return statusRef;
-}
+// Safe wander spots — none overlap with desk stations
+const WANDER_SPOTS: [number, number][] = [
+  [-10.5,-8],[-4,-8],[9.5,-8],[-11,7],[11,-6],
+  [7,1],[0,0],[4,-5],[-3,5],[6,-3],
+  [-7,1],[2,5],[-8,-2],[8,4],[0,-6],
+  [5,5],[-6,6],[10,0],[0,7],
+];
 
 export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
   const groupRef    = useRef<THREE.Group>(null);
@@ -86,35 +90,72 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
 
   const bubble = useGameStore(state => state.npcBubbles[agent.id] ?? null);
 
-  // Internal status that can evolve independently
-  const liveStatus = useRef(agent.status);
+  // Internal status that can evolve independently (includes phone + stretch)
+  const liveStatus = useRef<LiveStatus>(agent.status);
   const statusTimer = useRef(seed % 15 + 8);
 
   useFrame((state, delta) => {
     if (!groupRef.current) return;
     const t = state.clock.elapsedTime + seed * 0.37;
 
-    // Evolve status over time for more organic behavior
+    // Evolve status over time — per-NPC personality weights via seed
     statusTimer.current -= delta;
     if (statusTimer.current <= 0) {
       const roll = Math.random();
       const wasStatus = liveStatus.current;
-      if (roll < 0.45)      liveStatus.current = "working";
-      else if (roll < 0.60) liveStatus.current = "chatting";
-      else if (roll < 0.72) liveStatus.current = "idle";
-      else if (roll < 0.82) liveStatus.current = "coffee";
-      else if (roll < 0.90) liveStatus.current = "presenting";
-      else                  liveStatus.current = "moving";
-      statusTimer.current = 8 + Math.random() * 18;
+      const w = seed % 5;
+      if (w === 0) {       // tech-focused
+        if (roll < 0.42)      liveStatus.current = "working";
+        else if (roll < 0.54) liveStatus.current = "phone";
+        else if (roll < 0.64) liveStatus.current = "chatting";
+        else if (roll < 0.74) liveStatus.current = "coffee";
+        else if (roll < 0.84) liveStatus.current = "idle";
+        else if (roll < 0.92) liveStatus.current = "stretch";
+        else                  liveStatus.current = "presenting";
+      } else if (w === 1) { // balanced
+        if (roll < 0.38)      liveStatus.current = "working";
+        else if (roll < 0.55) liveStatus.current = "chatting";
+        else if (roll < 0.67) liveStatus.current = "coffee";
+        else if (roll < 0.77) liveStatus.current = "idle";
+        else if (roll < 0.86) liveStatus.current = "presenting";
+        else if (roll < 0.93) liveStatus.current = "phone";
+        else                  liveStatus.current = "stretch";
+      } else if (w === 2) { // social butterfly
+        if (roll < 0.28)      liveStatus.current = "working";
+        else if (roll < 0.48) liveStatus.current = "chatting";
+        else if (roll < 0.60) liveStatus.current = "presenting";
+        else if (roll < 0.70) liveStatus.current = "coffee";
+        else if (roll < 0.80) liveStatus.current = "idle";
+        else if (roll < 0.89) liveStatus.current = "phone";
+        else                  liveStatus.current = "stretch";
+      } else if (w === 3) { // deep-work + breaks
+        if (roll < 0.46)      liveStatus.current = "working";
+        else if (roll < 0.59) liveStatus.current = "stretch";
+        else if (roll < 0.69) liveStatus.current = "phone";
+        else if (roll < 0.79) liveStatus.current = "idle";
+        else if (roll < 0.88) liveStatus.current = "chatting";
+        else if (roll < 0.94) liveStatus.current = "coffee";
+        else                  liveStatus.current = "presenting";
+      } else {              // executive / social
+        if (roll < 0.25)      liveStatus.current = "working";
+        else if (roll < 0.42) liveStatus.current = "coffee";
+        else if (roll < 0.58) liveStatus.current = "chatting";
+        else if (roll < 0.70) liveStatus.current = "presenting";
+        else if (roll < 0.80) liveStatus.current = "phone";
+        else if (roll < 0.90) liveStatus.current = "idle";
+        else                  liveStatus.current = "stretch";
+      }
+      statusTimer.current = 7 + Math.random() * 16;
 
-      // Move to a new spot when transitioning
-      if (liveStatus.current === "moving" || liveStatus.current !== wasStatus) {
-        const SPOTS: [number, number][] = [
-          [-10.5,-8],[-4,-8],[9.5,-8],[-11,7],[11,-6],
-          [7,1],[0,0],[-5,-3],[-1,-3],[3,-3],[-5,3],[-1,3],[3,3],
-          [4,-5],[-3,5],[6,-3],[-7,1],[2,5],[-8,-2],[8,4],
-        ];
-        const spot = SPOTS[Math.floor(Math.random() * SPOTS.length)];
+      const newStatus = liveStatus.current;
+      if (newStatus === "working") {
+        // Return to home desk position (chair, not inside desk geometry)
+        const homeX = agent.positionX;
+        const homeZ = agent.positionZ <= -2.5 ? -1.9 : agent.positionZ >= 2.5 ? 3.3 : agent.positionZ;
+        targetPos.set(homeX, 0, homeZ);
+      } else if (newStatus !== wasStatus) {
+        // Wander to a safe open-area spot — no desk collisions
+        const spot = WANDER_SPOTS[Math.floor(Math.random() * WANDER_SPOTS.length)];
         targetPos.set(spot[0], 0, spot[1]);
       }
     }
@@ -141,7 +182,7 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
       }
     }
 
-    currentPos.current.lerp(targetPos, Math.min(delta * 2.2, 1));
+    currentPos.current.lerp(targetPos, Math.min(delta * 1.3, 0.055));
     groupRef.current.position.copy(currentPos.current);
     if (bumpRef.current > 0.01) {
       groupRef.current.position.y += Math.abs(Math.sin(state.clock.elapsedTime * 18)) * bumpRef.current * 0.22;
@@ -240,14 +281,51 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
       if (rightLegRef.current) rightLegRef.current.rotation.x = 0;
       groupRef.current.position.y = 0;
 
+    } else if (status === "phone") {
+      // On a phone call — right arm raised to ear, head tilted toward hand
+      if (rightArmRef.current) {
+        rightArmRef.current.rotation.x = -0.80 + Math.sin(t * 0.28 + seed) * 0.04;
+        rightArmRef.current.rotation.z = -0.44;
+      }
+      if (leftArmRef.current)  { leftArmRef.current.rotation.x = 0.04; leftArmRef.current.rotation.z = 0.18; }
+      if (headRef.current) {
+        headRef.current.rotation.z = 0.18 + Math.sin(t * 0.22) * 0.025;
+        headRef.current.rotation.x = 0.06;
+        headRef.current.rotation.y = -0.12 + Math.sin(t * 0.38 + seed) * 0.06;
+      }
+      if (bodyRef.current) { bodyRef.current.rotation.x = 0; bodyRef.current.rotation.z = Math.sin(t * 0.18 + seed) * 0.015; }
+      if (leftLegRef.current)  leftLegRef.current.rotation.x  = 0;
+      if (rightLegRef.current) rightLegRef.current.rotation.x = 0;
+      groupRef.current.position.y = 0;
+
+    } else if (status === "stretch") {
+      // Stretching — both arms raised, slight back lean
+      const s = Math.sin(t * 0.42 + seed * 0.3);
+      if (leftArmRef.current) {
+        leftArmRef.current.rotation.x = -1.08 + s * 0.13;
+        leftArmRef.current.rotation.z = -0.28 + s * 0.06;
+      }
+      if (rightArmRef.current) {
+        rightArmRef.current.rotation.x = -1.08 + s * 0.10;
+        rightArmRef.current.rotation.z =  0.28 - s * 0.06;
+      }
+      if (bodyRef.current) { bodyRef.current.rotation.x = -0.07 + s * 0.03; bodyRef.current.rotation.z = 0; }
+      if (headRef.current) {
+        headRef.current.rotation.x = -0.12 + Math.sin(t * 0.3) * 0.04;
+        headRef.current.rotation.y = Math.sin(t * 0.28 + seed) * 0.16;
+      }
+      if (leftLegRef.current)  leftLegRef.current.rotation.x  = 0;
+      if (rightLegRef.current) rightLegRef.current.rotation.x = 0;
+      groupRef.current.position.y = 0;
+
     } else {
-      // Idle breathing
+      // Idle breathing — gentle weight-shift and occasional look-around
       idlePhase.current += delta * 0.6;
       const breathe = Math.sin(t * 0.9 + seed * 0.5) * 0.012;
       const shift   = Math.sin(idlePhase.current * 0.5) * 0.02;
       if (bodyRef.current) { bodyRef.current.scale.y = 1 + breathe; bodyRef.current.rotation.z = shift; bodyRef.current.rotation.x = 0; }
       if (headRef.current) {
-        headRef.current.rotation.y = Math.sin(t * 0.25 + seed * 0.4) * 0.09;
+        headRef.current.rotation.y = Math.sin(t * 0.25 + seed * 0.4) * 0.14;
         headRef.current.rotation.x = Math.sin(t * 0.6 + seed) * 0.04;
       }
       if (leftArmRef.current)  { leftArmRef.current.rotation.x = 0; leftArmRef.current.rotation.z = 0.1 + shift * 0.5; }
@@ -258,7 +336,7 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
     }
   });
 
-  const activity = getActivityEmoji({ ...agent, status: liveStatus.current });
+  const activity = getActivityEmoji(agent, liveStatus.current);
 
   return (
     <group ref={groupRef} position={[agent.positionX, 0, agent.positionZ]}

@@ -1,6 +1,6 @@
 import { Suspense, useMemo, useRef, useCallback, Component, ReactNode, useState, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { MeshReflectorMaterial, Stars } from "@react-three/drei";
+import { MeshReflectorMaterial } from "@react-three/drei";
 import * as THREE from "three";
 import { useListAgents, getListAgentsQueryKey } from "@workspace/api-client-react";
 import { AgentAvatar } from "./AgentAvatar";
@@ -11,6 +11,7 @@ import { useGameTime } from "@/context/GameTimeContext";
 import { useFloor, FLOOR_THEMES, type FloorId, type NpcAgent } from "@/context/FloorContext";
 import { useGameStore } from "@/store/gameStore";
 import { FirstPersonController } from "./FirstPersonController";
+import { ElevatorCab3D } from "./ElevatorCab3D";
 import { LobbyCamera } from "./LobbyCamera";
 import { CityExterior } from "./CityExterior";
 import { DeveloperRoom } from "./DeveloperRoom";
@@ -302,16 +303,7 @@ function FloorProps({ floorId }: { floorId: FloorId }) {
         <meshLambertMaterial color={theme.accent} emissive={theme.accent} emissiveIntensity={0.35} transparent opacity={0.85} />
       </mesh>
 
-      {/* Elevator door */}
-      <mesh position={[-13.9, 1.5, 0]}><boxGeometry args={[0.05, 2.8, 1.2]} /><meshLambertMaterial color="#c8a830" emissive="#c8a830" emissiveIntensity={0.3} /></mesh>
-      <mesh position={[-13.9, 0.1, 0]}><boxGeometry args={[0.05, 0.2, 1.2]} /><meshLambertMaterial color="#c8a830" emissive="#c8a830" emissiveIntensity={0.5} /></mesh>
-      <mesh position={[-13.7, 1.2, 0.8]}><boxGeometry args={[0.06, 0.4, 0.25]} /><meshLambertMaterial color="#2a2a3a" /></mesh>
-      {[0.08, -0.08].map((dy, i) => (
-        <mesh key={i} position={[-13.65, 1.2 + dy, 0.8]}>
-          <cylinderGeometry args={[0.03, 0.03, 0.02, 8]} />
-          <meshLambertMaterial color="#f59e0b" emissive="#f59e0b" emissiveIntensity={0.6} />
-        </mesh>
-      ))}
+      {/* Elevator cab is now handled by ElevatorCab3D component in the main scene */}
 
       {/* Corner plants */}
       {[[-11.5, 0, -8],[-11.5, 0, 8],[11.5, 0, -8]].map(([x, y, z], i) => (
@@ -439,6 +431,7 @@ interface Props {
   selectedAgentId: number | string | null;
   onChatAgent: (agent: unknown) => void;
   onNearNpc?: (name: string | null, agentData?: unknown) => void;
+  onNearElevator?: (near: boolean) => void;
 }
 
 function checkWebGL() {
@@ -448,7 +441,7 @@ function checkWebGL() {
   } catch { return false; }
 }
 
-export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNearNpc }: Props) {
+export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNearNpc, onNearElevator }: Props) {
   const webGLAvailable = useMemo(() => checkWebGL(), []);
   const gameState = useGameStore(s => s.gameState);
   const { currentFloor, getNpcsByFloor } = useFloor();
@@ -522,6 +515,7 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
               jumpTrigger={jumpTrigger}
               npcPositions={npcPositions}
               onNearNpc={onNearNpc}
+              onNearElevator={onNearElevator}
             />
           )}
 
@@ -529,8 +523,8 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
           {settings.bloomEnabled && <PostProcessingEffects />}
 
           <Suspense fallback={null}>
-            <Stars radius={80} depth={40} count={300} factor={4} fade speed={0.6} />
             <ReflectiveFloor floorId={currentFloor} />
+            <ElevatorCab3D />
             <FloorProps floorId={currentFloor} />
 
             {/* City exterior visible through windows */}

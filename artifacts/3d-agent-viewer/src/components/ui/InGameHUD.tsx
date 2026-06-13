@@ -4,9 +4,11 @@ import { useGameStore } from '@/store/gameStore'
 interface Props {
   nearNpcName: string | null
   onInteract: () => void
+  nearElevator?: boolean
+  onElevatorInteract?: () => void
 }
 
-export function InGameHUD({ nearNpcName, onInteract }: Props) {
+export function InGameHUD({ nearNpcName, onInteract, nearElevator, onElevatorInteract }: Props) {
   const { currentFloor } = useFloor()
   const { user, gameState } = useGameStore()
   if (gameState !== 'playing') return null
@@ -22,7 +24,7 @@ export function InGameHUD({ nearNpcName, onInteract }: Props) {
         </div>
       </div>
 
-      {/* Interact prompt */}
+      {/* NPC interact prompt */}
       {nearNpcName && (
         <div
           style={{
@@ -39,6 +41,26 @@ export function InGameHUD({ nearNpcName, onInteract }: Props) {
             — Tekan <kbd style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 4, padding: '1px 6px', fontFamily: 'monospace' }}>E</kbd> untuk chat
           </span>
           <span className="sm:hidden" style={{ color: 'rgba(255,255,255,0.55)', marginLeft: 8 }}>— Tap untuk chat</span>
+        </div>
+      )}
+
+      {/* Elevator proximity prompt */}
+      {nearElevator && !nearNpcName && (
+        <div
+          style={{
+            position: 'absolute', bottom: '35%', left: '50%', transform: 'translateX(-50%)', zIndex: 20,
+            background: 'rgba(0,0,0,0.8)', border: '1px solid rgba(200,160,32,0.4)',
+            borderRadius: 12, padding: '8px 18px', color: '#fff', fontSize: 13, fontWeight: 600,
+            backdropFilter: 'blur(6px)', cursor: 'pointer', whiteSpace: 'nowrap',
+            maxWidth: 'calc(100vw - 32px)',
+          }}
+          onClick={onElevatorInteract}
+        >
+          <span style={{ color: '#fcd34d' }}>🛗 Elevator</span>
+          <span className="hidden sm:inline" style={{ color: 'rgba(255,255,255,0.55)', marginLeft: 8 }}>
+            — Tekan <kbd style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 4, padding: '1px 6px', fontFamily: 'monospace' }}>E</kbd> untuk panggil
+          </span>
+          <span className="sm:hidden" style={{ color: 'rgba(255,255,255,0.55)', marginLeft: 8 }}>— Tap untuk panggil</span>
         </div>
       )}
 
