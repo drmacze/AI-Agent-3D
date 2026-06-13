@@ -18,6 +18,7 @@ import { DeveloperRoom } from "./DeveloperRoom";
 import { OfficeFloor } from "./OfficeFloor";
 import { NpcConversations } from "./NpcConversations";
 import { PostProcessingEffects } from "./PostProcessingEffects";
+import { CeilingSystem, WallSystem, PerFloorZone } from "./OfficeArchitecture";
 import { TouchControls } from "@/components/ui/TouchControls";
 import { useSettings } from "@/context/SettingsContext";
 import { FPSCounter } from "@/components/ui/FPSCounter";
@@ -268,60 +269,21 @@ function FloorProps({ floorId }: { floorId: FloorId }) {
 
   return (
     <group>
-      {/* Ceiling */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 4, 0]}>
-        <planeGeometry args={[28, 20]} /><meshLambertMaterial color="#f0eee9" />
-      </mesh>
-
-      {/* Walls */}
-      <mesh position={[0, 2, -10]}><planeGeometry args={[28, 4]} /><meshLambertMaterial color="#eceae5" /></mesh>
-      <mesh position={[0, 2,  10]} rotation={[0, Math.PI, 0]}><planeGeometry args={[28, 4]} /><meshLambertMaterial color="#f0eee9" /></mesh>
-      <mesh position={[-14, 2, 0]} rotation={[0,  Math.PI / 2, 0]}><planeGeometry args={[20, 4]} /><meshLambertMaterial color="#eeeae4" /></mesh>
-      <mesh position={[ 14, 2, 0]} rotation={[0, -Math.PI / 2, 0]}><planeGeometry args={[20, 4]} /><meshLambertMaterial color="#f5f2ee" /></mesh>
-
-      {/* Windows with glow */}
-      {[-4, 0, 4].map((z, i) => (
-        <group key={i} position={[13.95, 2.2, z]}>
-          <mesh rotation={[0, -Math.PI / 2, 0]}>
-            <planeGeometry args={[2.6, 2.2]} />
-            <meshLambertMaterial color="#c8e4f5" transparent opacity={0.88} emissive={theme.accent} emissiveIntensity={0.18} />
-          </mesh>
-          {[
-            { pos: [0,  1.15, 0] as [number,number,number], size: [2.7, 0.07, 0.09] as [number,number,number] },
-            { pos: [0, -1.15, 0] as [number,number,number], size: [2.7, 0.07, 0.09] as [number,number,number] },
-            { pos: [-1.35, 0, 0] as [number,number,number], size: [0.07, 2.3, 0.09] as [number,number,number] },
-            { pos: [ 1.35, 0, 0] as [number,number,number], size: [0.07, 2.3, 0.09] as [number,number,number] },
-          ].map((f, j) => (
-            <mesh key={j} position={f.pos} rotation={[0, -Math.PI / 2, 0]}>
-              <boxGeometry args={f.size} /><meshLambertMaterial color="#f8f6f2" />
-            </mesh>
-          ))}
-        </group>
-      ))}
-
-      {/* Ceiling LED strips — neutral warm white, same on all floors */}
-      {[[-5, 3.96, -3],[0, 3.96, -3],[5, 3.96, -3],[-5, 3.96, 3],[0, 3.96, 3],[5, 3.96, 3]].map(([x, y, z], i) => (
-        <mesh key={i} position={[x, y, z] as [number,number,number]}>
-          <boxGeometry args={[0.14, 0.04, 2.8]} />
-          <meshLambertMaterial color="#fffff8" emissive="#fffde8" emissiveIntensity={0.12} />
-        </mesh>
-      ))}
-
-      {/* Department sign */}
-      <mesh position={[0, 3.2, -9.9]}>
-        <boxGeometry args={[5, 0.5, 0.05]} />
-        <meshLambertMaterial color={theme.accent} emissive={theme.accent} emissiveIntensity={0.35} transparent opacity={0.85} />
-      </mesh>
+      {/* ── Modular architecture ── */}
+      <CeilingSystem floorId={floorId} />
+      <WallSystem floorId={floorId} />
+      <PerFloorZone floorId={floorId} />
 
       {/* Elevator cab is now handled by ElevatorCab3D component in the main scene */}
 
       {/* Corner plants */}
       {[[-11.5, 0, -8],[-11.5, 0, 8],[11.5, 0, -8]].map(([x, y, z], i) => (
         <group key={i} position={[x, y, z] as [number,number,number]}>
-          <mesh position={[0, 0.22, 0]}><cylinderGeometry args={[0.2, 0.16, 0.44, 8]} /><meshLambertMaterial color="#a0704a" /></mesh>
-          <mesh position={[0, 0.7, 0]}><cylinderGeometry args={[0.04, 0.055, 0.52, 6]} /><meshLambertMaterial color="#5a3818" /></mesh>
-          <mesh position={[0, 1.1, 0]}><sphereGeometry args={[0.4, 7, 6]} /><meshLambertMaterial color="#2d7a3a" /></mesh>
-          <mesh position={[0.2, 0.95, 0.1]}><sphereGeometry args={[0.22, 6, 5]} /><meshLambertMaterial color="#3a8a45" /></mesh>
+          <mesh position={[0, 0.22, 0]} castShadow><cylinderGeometry args={[0.2, 0.16, 0.44, 8]} /><meshStandardMaterial color="#a0704a" roughness={0.82} metalness={0.04} /></mesh>
+          <mesh position={[0, 0.7, 0]}><cylinderGeometry args={[0.04, 0.055, 0.52, 6]} /><meshStandardMaterial color="#4a2808" roughness={0.92} metalness={0.0} /></mesh>
+          <mesh position={[0, 1.1, 0]} castShadow><sphereGeometry args={[0.42, 8, 7]} /><meshStandardMaterial color="#2a6e30" roughness={0.88} metalness={0.0} /></mesh>
+          <mesh position={[0.2, 0.95, 0.1]}><sphereGeometry args={[0.24, 7, 6]} /><meshStandardMaterial color="#388a40" roughness={0.88} metalness={0.0} /></mesh>
+          <mesh position={[-0.18, 0.98, -0.08]}><sphereGeometry args={[0.20, 7, 6]} /><meshStandardMaterial color="#2d7838" roughness={0.88} metalness={0.0} /></mesh>
         </group>
       ))}
 
@@ -339,71 +301,75 @@ function FloorProps({ floorId }: { floorId: FloorId }) {
         return (
           <group key={i}>
             {/* Desk top */}
-            <mesh position={[dx, 0.74, dz]}>
-              <boxGeometry args={[1.4, 0.07, 0.78]} /><meshLambertMaterial color="#c8a870" />
+            <mesh position={[dx, 0.74, dz]} castShadow receiveShadow>
+              <boxGeometry args={[1.4, 0.07, 0.78]} /><meshStandardMaterial color="#c8a870" roughness={0.55} metalness={0.0} />
             </mesh>
             {/* Desk side panels */}
             <mesh position={[dx - 0.68, 0.38, dz]}>
-              <boxGeometry args={[0.04, 0.76, 0.74]} /><meshLambertMaterial color="#b89860" />
+              <boxGeometry args={[0.04, 0.76, 0.74]} /><meshStandardMaterial color="#b89860" roughness={0.58} metalness={0.0} />
             </mesh>
             <mesh position={[dx + 0.68, 0.38, dz]}>
-              <boxGeometry args={[0.04, 0.76, 0.74]} /><meshLambertMaterial color="#b89860" />
+              <boxGeometry args={[0.04, 0.76, 0.74]} /><meshStandardMaterial color="#b89860" roughness={0.58} metalness={0.0} />
             </mesh>
             {/* Monitor stand neck */}
             <mesh position={[dx, 0.84, monZ]}>
-              <boxGeometry args={[0.055, 0.18, 0.055]} /><meshLambertMaterial color="#2a2a3a" />
+              <boxGeometry args={[0.055, 0.18, 0.055]} /><meshStandardMaterial color="#22242e" roughness={0.35} metalness={0.55} />
             </mesh>
             {/* Monitor stand base */}
             <mesh position={[dx, 0.78, monZ]}>
-              <boxGeometry args={[0.24, 0.02, 0.14]} /><meshLambertMaterial color="#2a2a3a" />
+              <boxGeometry args={[0.24, 0.02, 0.14]} /><meshStandardMaterial color="#22242e" roughness={0.35} metalness={0.55} />
             </mesh>
             {/* Animated monitor */}
             <AnimatedMonitor pos={station.pos} accent={theme.accent} />
             {/* Keyboard */}
             <mesh position={[dx, 0.785, kbZ]}>
-              <boxGeometry args={[0.38, 0.018, 0.15]} /><meshLambertMaterial color="#1e2030" />
+              <boxGeometry args={[0.38, 0.018, 0.15]} /><meshStandardMaterial color="#1e2030" roughness={0.55} metalness={0.18} />
             </mesh>
             {/* Keyboard keys strip */}
             <mesh position={[dx, 0.796, kbZ]}>
-              <boxGeometry args={[0.34, 0.008, 0.12]} /><meshLambertMaterial color="#2a2e44" />
+              <boxGeometry args={[0.34, 0.008, 0.12]} /><meshStandardMaterial color="#2a2e44" roughness={0.6} metalness={0.1} />
             </mesh>
             {/* Mouse */}
             <mesh position={[dx + 0.27, 0.783, kbZ]}>
-              <boxGeometry args={[0.08, 0.016, 0.12]} /><meshLambertMaterial color="#28303a" />
+              <boxGeometry args={[0.08, 0.016, 0.12]} /><meshStandardMaterial color="#28303a" roughness={0.48} metalness={0.22} />
             </mesh>
             {/* Desk item: mug */}
             <mesh position={[dx - 0.45, 0.79, dz - 0.08]}>
-              <cylinderGeometry args={[0.035, 0.030, 0.08, 8]} /><meshLambertMaterial color="#e8e0d8" />
+              <cylinderGeometry args={[0.035, 0.030, 0.08, 8]} /><meshStandardMaterial color="#e8e0d8" roughness={0.80} metalness={0.0} />
+            </mesh>
+            {/* Desk notepad */}
+            <mesh position={[dx + 0.38, 0.782, dz + 0.06]}>
+              <boxGeometry args={[0.16, 0.006, 0.20]} /><meshStandardMaterial color="#f8f4ec" roughness={0.92} metalness={0.0} />
             </mesh>
 
             {/* ── Office Chair ── */}
             {/* Seat shell */}
             <mesh position={[cx, 0.44, cz]}>
-              <boxGeometry args={[0.46, 0.06, 0.46]} /><meshLambertMaterial color="#2a3448" />
+              <boxGeometry args={[0.46, 0.06, 0.46]} /><meshStandardMaterial color="#1e2838" roughness={0.62} metalness={0.08} />
             </mesh>
             {/* Seat cushion */}
             <mesh position={[cx, 0.485, cz]}>
-              <boxGeometry args={[0.42, 0.04, 0.42]} /><meshLambertMaterial color={theme.accent} />
+              <boxGeometry args={[0.42, 0.04, 0.42]} /><meshStandardMaterial color={theme.accent} roughness={0.75} metalness={0.0} />
             </mesh>
             {/* Back frame */}
             <mesh position={[cx, 0.70, backZ]}>
-              <boxGeometry args={[0.44, 0.38, 0.06]} /><meshLambertMaterial color="#2a3448" />
+              <boxGeometry args={[0.44, 0.38, 0.06]} /><meshStandardMaterial color="#1e2838" roughness={0.62} metalness={0.08} />
             </mesh>
             {/* Back cushion */}
             <mesh position={[cx, 0.70, backZ - 0.02]}>
-              <boxGeometry args={[0.40, 0.34, 0.04]} /><meshLambertMaterial color={theme.accent} />
+              <boxGeometry args={[0.40, 0.34, 0.04]} /><meshStandardMaterial color={theme.accent} roughness={0.75} metalness={0.0} />
             </mesh>
             {/* Left armrest */}
             <mesh position={[cx - 0.24, 0.57, cz]}>
-              <boxGeometry args={[0.04, 0.05, 0.36]} /><meshLambertMaterial color="#2a3448" />
+              <boxGeometry args={[0.04, 0.05, 0.36]} /><meshStandardMaterial color="#1e2838" roughness={0.55} metalness={0.12} />
             </mesh>
             {/* Right armrest */}
             <mesh position={[cx + 0.24, 0.57, cz]}>
-              <boxGeometry args={[0.04, 0.05, 0.36]} /><meshLambertMaterial color="#2a3448" />
+              <boxGeometry args={[0.04, 0.05, 0.36]} /><meshStandardMaterial color="#1e2838" roughness={0.55} metalness={0.12} />
             </mesh>
             {/* Gas lift pole */}
             <mesh position={[cx, 0.22, cz]}>
-              <cylinderGeometry args={[0.034, 0.034, 0.44, 6]} /><meshLambertMaterial color="#3a4858" />
+              <cylinderGeometry args={[0.034, 0.034, 0.44, 6]} /><meshStandardMaterial color="#2e3e50" roughness={0.38} metalness={0.65} />
             </mesh>
             {/* Five-star base arms */}
             {[0, 72, 144, 216, 288].map((deg, bi) => {
@@ -413,7 +379,7 @@ function FloorProps({ floorId }: { floorId: FloorId }) {
                   position={[cx + Math.sin(rad) * 0.13, 0.045, cz + Math.cos(rad) * 0.13]}
                   rotation={[0, -rad, 0]}>
                   <boxGeometry args={[0.038, 0.038, 0.28]} />
-                  <meshLambertMaterial color="#3a4858" />
+                  <meshStandardMaterial color="#2e3e50" roughness={0.38} metalness={0.65} />
                 </mesh>
               );
             })}
@@ -423,33 +389,41 @@ function FloorProps({ floorId }: { floorId: FloorId }) {
 
       {/* Meeting table */}
       <group position={[7, 0, 1]}>
-        <mesh position={[0, 0.74, 0]}><boxGeometry args={[2.8, 0.08, 1.4]} /><meshLambertMaterial color="#c8a870" /></mesh>
-        <mesh position={[0, 0.78, 0]}><boxGeometry args={[2.9, 0.04, 1.5]} /><meshLambertMaterial color="#a88050" /></mesh>
+        <mesh position={[0, 0.74, 0]} castShadow receiveShadow><boxGeometry args={[2.8, 0.08, 1.4]} /><meshStandardMaterial color="#c8a870" roughness={0.50} metalness={0.0} /></mesh>
+        <mesh position={[0, 0.78, 0]}><boxGeometry args={[2.9, 0.04, 1.5]} /><meshStandardMaterial color="#a88050" roughness={0.45} metalness={0.04} /></mesh>
         {[[-1.25,-0.55],[1.25,-0.55],[-1.25,0.55],[1.25,0.55]].map(([lx,lz], i) => (
           <mesh key={i} position={[lx, 0.35, lz] as [number,number,number]}>
-            <boxGeometry args={[0.07,0.7,0.07]} /><meshLambertMaterial color="#907040" />
+            <boxGeometry args={[0.07,0.7,0.07]} /><meshStandardMaterial color="#906838" roughness={0.52} metalness={0.04} />
           </mesh>
         ))}
         {/* Meeting room chairs */}
         {[[-1.25,-0.9],[1.25,-0.9],[-1.25,0.9],[1.25,0.9],[-0.4,-0.9],[0.4,-0.9]].map(([cx,cz], i) => (
           <mesh key={i} position={[cx, 0.44, cz] as [number,number,number]}>
-            <boxGeometry args={[0.4,0.04,0.4]} /><meshLambertMaterial color={theme.accent} transparent opacity={0.7} />
+            <boxGeometry args={[0.4,0.04,0.4]} /><meshStandardMaterial color={theme.accent} roughness={0.72} metalness={0.0} transparent opacity={0.8} />
           </mesh>
         ))}
         {/* Laptop on table */}
-        <mesh position={[0, 0.83, 0]}><boxGeometry args={[0.35, 0.01, 0.28]} /><meshLambertMaterial color="#1a1a2e" /></mesh>
-        <mesh position={[0, 0.97, -0.12]} rotation={[-0.45, 0, 0]}><boxGeometry args={[0.35, 0.24, 0.01]} /><meshLambertMaterial color="#1a1a2e" emissive={theme.accent} emissiveIntensity={0.2} /></mesh>
+        <mesh position={[0, 0.83, 0]}><boxGeometry args={[0.35, 0.01, 0.28]} /><meshStandardMaterial color="#12121e" roughness={0.35} metalness={0.45} /></mesh>
+        <mesh position={[0, 0.97, -0.12]} rotation={[-0.45, 0, 0]}><boxGeometry args={[0.35, 0.24, 0.01]} /><meshStandardMaterial color="#12121e" emissive={theme.accent} emissiveIntensity={0.22} roughness={0.2} metalness={0.4} /></mesh>
+        {/* Water bottle */}
+        <mesh position={[1.0, 0.88, -0.4]}><cylinderGeometry args={[0.028, 0.026, 0.22, 8]} /><meshStandardMaterial color="#c8e8f0" transparent opacity={0.60} roughness={0.05} /></mesh>
       </group>
 
       {/* Bookshelf */}
       <group position={[9.5, 0, -8]}>
-        <mesh position={[0, 1, 0]}><boxGeometry args={[1.4, 2.0, 0.35]} /><meshLambertMaterial color="#a07850" /></mesh>
+        <mesh position={[0, 1, 0]} castShadow><boxGeometry args={[1.4, 2.0, 0.35]} /><meshStandardMaterial color="#906840" roughness={0.60} metalness={0.04} /></mesh>
+        {/* Shelf panels */}
+        {[0.05, 0.65, 1.25, 1.85].map((y, si) => (
+          <mesh key={si} position={[0, y, 0]}>
+            <boxGeometry args={[1.35, 0.04, 0.32]} /><meshStandardMaterial color="#785830" roughness={0.58} metalness={0.04} />
+          </mesh>
+        ))}
         {[0.6, 1.0, 1.4].map((y, shelf) => (
           <group key={shelf}>
-            {[[-0.4,-0.1,0.0,0.3,0.15],[-0.2,0.1,0.25,0.22,0.18],[0.0,0.05,0.2,0.18,0.16],[0.22,-0.05,0.18,0.24,0.14]].map(([xo,,,,], book) => (
+            {[[-0.4],[-0.2],[0.0],[0.22]].map(([xo], book) => (
               <mesh key={book} position={[xo as number, y + 0.15, 0.02]}>
                 <boxGeometry args={[0.11, 0.32, 0.22]} />
-                <meshLambertMaterial color={["#e53e3e","#3182ce","#38a169","#d69e2e"][book % 4]} />
+                <meshStandardMaterial color={["#e53e3e","#3182ce","#38a169","#d69e2e"][book % 4]} roughness={0.88} metalness={0.0} />
               </mesh>
             ))}
           </group>
