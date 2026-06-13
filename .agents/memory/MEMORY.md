@@ -1,0 +1,1 @@
+- [DLavie OS project overview](dlavie-os.md) — monorepo 3D office sim; DB agents Floor 1, NPC agents Floors 2-5; always run db:push + seed after fresh deploy.

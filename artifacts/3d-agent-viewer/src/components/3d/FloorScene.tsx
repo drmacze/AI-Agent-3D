@@ -1,6 +1,6 @@
-import { Suspense, useMemo, useRef, Component, ReactNode } from "react";
+import { Suspense, useMemo, useRef, Component, ReactNode, useState, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, MeshReflectorMaterial } from "@react-three/drei";
+import { OrbitControls, MeshReflectorMaterial, Stars } from "@react-three/drei";
 import * as THREE from "three";
 import { useListAgents, getListAgentsQueryKey } from "@workspace/api-client-react";
 import { AgentAvatar } from "./AgentAvatar";
@@ -10,7 +10,7 @@ import { ConnectionLine } from "./ConnectionLine";
 import { useGameTime } from "@/context/GameTimeContext";
 import { useFloor, FLOOR_THEMES, type FloorId, type NpcAgent } from "@/context/FloorContext";
 
-// ── WebGL error boundary ─────────────────────────────────────────────────────
+// ── WebGL error boundary ──────────────────────────────────────────────────────
 class WebGLErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   constructor(props: { children: ReactNode }) { super(props); this.state = { failed: false }; }
   componentDidCatch() { this.setState({ failed: true }); }
@@ -44,6 +44,7 @@ function DynamicLights({ floorId }: { floorId: FloorId }) {
   const ambRef  = useRef<THREE.AmbientLight>(null);
   const sunRef  = useRef<THREE.DirectionalLight>(null);
   const fillRef = useRef<THREE.DirectionalLight>(null);
+  const floorRef = useRef<THREE.PointLight>(null);
   const { lightConfig } = useGameTime();
   const theme = FLOOR_THEMES[floorId];
 
@@ -61,6 +62,10 @@ function DynamicLights({ floorId }: { floorId: FloorId }) {
     sunRef.current.intensity = THREE.MathUtils.lerp(sunRef.current.intensity, lightConfig.sunIntensity, sp);
     fillRef.current.color.lerp(tf, sp);
     fillRef.current.intensity = THREE.MathUtils.lerp(fillRef.current.intensity, lightConfig.fillIntensity, sp);
+    // Floor accent light pulse
+    if (floorRef.current) {
+      floorRef.current.intensity = 0.4 + Math.sin(Date.now() * 0.001) * 0.1;
+    }
   });
 
   return (
@@ -68,8 +73,12 @@ function DynamicLights({ floorId }: { floorId: FloorId }) {
       <ambientLight ref={ambRef} color={lightConfig.ambientColor} intensity={lightConfig.ambientIntensity} />
       <directionalLight ref={sunRef} color={lightConfig.sunColor} intensity={lightConfig.sunIntensity} position={[14, 10, 2]} />
       <directionalLight ref={fillRef} color={lightConfig.fillColor} intensity={lightConfig.fillIntensity} position={[0, 8, 0]} />
-      <pointLight color={theme.accent} intensity={0.5} distance={8} position={[-10.5, 2.5, -7.5]} />
-      <directionalLight color="#d8eeff" intensity={0.3} position={[13, 3, 0]} />
+      <pointLight ref={floorRef} color={theme.accent} intensity={0.4} distance={10} position={[-10.5, 2.5, -7.5]} />
+      <pointLight color={theme.accent} intensity={0.3} distance={8} position={[9.5, 2, -7.5]} />
+      <directionalLight color="#d8eeff" intensity={0.25} position={[13, 3, 0]} />
+      {/* Ceiling LED strips */}
+      <pointLight color="#fffbf0" intensity={0.8} distance={12} position={[-4, 3.8, 0]} />
+      <pointLight color="#fffbf0" intensity={0.8} distance={12} position={[ 4, 3.8, 0]} />
     </>
   );
 }
@@ -80,30 +89,160 @@ function SceneBackground() {
   return null;
 }
 
-// ── Reflective floor with wood shader ─────────────────────────────────────────
+// ── Animated monitor screens ──────────────────────────────────────────────────
+function AnimatedMonitor({ pos, rot, accent }: { pos: [number,number,number]; rot: number; accent: string }) {
+  const ref = useRef<THREE.Mesh>(null);
+  const phase = useRef(Math.random() * Math.PI * 2);
+  useFrame((state) => {
+    if (!ref.current) {
+      return;
+    }
+    const mat = ref.current.material as THREE.MeshLambertMaterial;
+    mat.emissiveIntensity = 0.2 + Math.sin(state.clock.elapsedTime * 0.8 + phase.current) * 0.08;
+  });
+  const monZ = pos[2] + (rot === 0 ? -0.18 : 0.18);
+  return (
+    <mesh ref={ref} position={[pos[0], 1.22, monZ]}>
+      <boxGeometry args={[0.55, 0.35, 0.03]} />
+      <meshLambertMaterial color="#0d1117" emissive={accent} emissiveIntensity={0.25} />
+    </mesh>
+  );
+}
+
+// ── Floating data particles ───────────────────────────────────────────────────
+function DataParticles({ accent }: { accent: string }) {
+  const ref = useRef<THREE.Points>(null);
+  const count = 60;
+  const positions = useMemo(() => {
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      pos[i * 3]     = (Math.random() - 0.5) * 24;
+      pos[i * 3 + 1] = Math.random() * 3.5;
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 18;
+    }
+    return pos;
+  }, []);
+  const speeds = useMemo(() => Array.from({ length: count }, () => 0.2 + Math.random() * 0.5), []);
+
+  useFrame((state) => {
+    if (!ref.current) return;
+    const pos = ref.current.geometry.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < count; i++) {
+      pos.array[i * 3 + 1] = (pos.array[i * 3 + 1] + speeds[i] * 0.01) % 4;
+      (pos.array as Float32Array)[i * 3] += Math.sin(state.clock.elapsedTime * 0.3 + i * 0.7) * 0.003;
+    }
+    pos.needsUpdate = true;
+  });
+
+  return (
+    <points ref={ref}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+      </bufferGeometry>
+      <pointsMaterial color={accent} size={0.04} transparent opacity={0.55} sizeAttenuation />
+    </points>
+  );
+}
+
+// ── Reflective floor ──────────────────────────────────────────────────────────
 function ReflectiveFloor({ floorId }: { floorId: FloorId }) {
   const theme = FLOOR_THEMES[floorId];
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
       <planeGeometry args={[28, 20]} />
       <MeshReflectorMaterial
-        blur={[300, 100]}
+        blur={[280, 80]}
         resolution={512}
-        mixBlur={1}
-        mixStrength={25}
-        roughness={0.85}
-        depthScale={1.2}
-        minDepthThreshold={0.4}
-        maxDepthThreshold={1.4}
+        mixBlur={0.9}
+        mixStrength={30}
+        roughness={0.8}
+        depthScale={1.3}
+        minDepthThreshold={0.35}
+        maxDepthThreshold={1.5}
         color={floorId === 1 ? "#c8a870" : floorId === 2 ? "#9b6fd0" : floorId === 3 ? "#2d6e5a" : floorId === 4 ? "#8a6020" : "#4a1a1a"}
-        metalness={0.2}
+        metalness={0.25}
         mirror={0}
       />
     </mesh>
   );
 }
 
-// ── Floor-specific office props ────────────────────────────────────────────────
+// ── Whiteboard with animated content ─────────────────────────────────────────
+function AnimatedWhiteboard({ accent }: { accent: string }) {
+  const lineRef = useRef<THREE.Mesh>(null);
+  useFrame((state) => {
+    if (!lineRef.current) return;
+    const mat = lineRef.current.material as THREE.MeshLambertMaterial;
+    mat.emissiveIntensity = 0.1 + Math.abs(Math.sin(state.clock.elapsedTime * 0.5)) * 0.15;
+  });
+  return (
+    <group position={[-4, 1.8, -9.88]}>
+      {/* Board surface */}
+      <mesh><boxGeometry args={[3.2, 1.8, 0.05]} /><meshLambertMaterial color="#f8f6f2" /></mesh>
+      {/* Board frame */}
+      <mesh position={[0, 0, 0.028]}><boxGeometry args={[3.3, 1.85, 0.02]} /><meshLambertMaterial color="#d0ccc6" /></mesh>
+      {/* "Diagram" lines */}
+      {[[-0.8, 0.3], [0, 0.3], [0.8, 0.3]].map(([x, y], i) => (
+        <mesh key={i} position={[x, y, 0.04]}>
+          <boxGeometry args={[0.55, 0.35, 0.01]} />
+          <meshLambertMaterial color="#e8edf0" />
+        </mesh>
+      ))}
+      <mesh ref={lineRef} position={[0, -0.2, 0.04]}>
+        <boxGeometry args={[2.4, 0.04, 0.01]} />
+        <meshLambertMaterial color={accent} emissive={accent} emissiveIntensity={0.15} />
+      </mesh>
+      {[[-0.8, -0.45], [0, -0.45], [0.8, -0.45]].map(([x, y], i) => (
+        <mesh key={i} position={[x, y, 0.04]}>
+          <boxGeometry args={[0.3, 0.2, 0.01]} />
+          <meshLambertMaterial color="#e8edf5" />
+        </mesh>
+      ))}
+      {/* Marker tray */}
+      <mesh position={[0, -0.96, 0.02]}><boxGeometry args={[3.2, 0.08, 0.12]} /><meshLambertMaterial color="#c8c4be" /></mesh>
+      {[[-0.5, 0], [0, 0], [0.5, 0]].map(([x], i) => (
+        <mesh key={i} position={[x, -0.95, 0.07]}>
+          <cylinderGeometry args={[0.018, 0.018, 0.14, 6]} />
+          <meshLambertMaterial color={i === 0 ? "#e53e3e" : i === 1 ? "#3182ce" : "#38a169"} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+// ── Coffee station ────────────────────────────────────────────────────────────
+function CoffeeStation({ accent }: { accent: string }) {
+  const steamRef = useRef<THREE.Mesh>(null);
+  useFrame((state) => {
+    if (!steamRef.current) return;
+    steamRef.current.position.y = 1.2 + Math.sin(state.clock.elapsedTime * 1.5) * 0.04;
+    steamRef.current.material.opacity = 0.3 + Math.sin(state.clock.elapsedTime * 2) * 0.12;
+  });
+  return (
+    <group position={[-10.5, 0, -8]}>
+      <mesh position={[0, 0.55, 0]}><boxGeometry args={[0.55, 1.1, 0.45]} /><meshLambertMaterial color="#2a2a2a" /></mesh>
+      <mesh position={[0, 0.8, 0.228]}><boxGeometry args={[0.3, 0.22, 0.01]} /><meshLambertMaterial color="#1a3a5a" emissive={accent} emissiveIntensity={0.45} /></mesh>
+      {/* Display numbers */}
+      <mesh position={[0, 0.65, 0.23]}><boxGeometry args={[0.18, 0.08, 0.005]} /><meshLambertMaterial color="#0a1628" emissive="#00ff88" emissiveIntensity={0.5} /></mesh>
+      <mesh position={[0, 0.26, 0.22]}><boxGeometry args={[0.28, 0.02, 0.2]} /><meshLambertMaterial color="#444444" /></mesh>
+      <mesh position={[0, 0.04, 0]}><boxGeometry args={[1.2, 0.08, 0.8]} /><meshLambertMaterial color="#b08060" /></mesh>
+      {/* Steam */}
+      <mesh ref={steamRef} position={[0, 1.18, 0.1]}>
+        <sphereGeometry args={[0.06, 6, 4]} />
+        <meshLambertMaterial color="#e8e8e8" transparent opacity={0.3} />
+      </mesh>
+      {/* Coffee cups waiting */}
+      {[[-0.18, 0], [0.18, 0]].map(([x], i) => (
+        <group key={i} position={[x, 0.12, 0.22]}>
+          <mesh><cylinderGeometry args={[0.04, 0.032, 0.07, 8]} /><meshLambertMaterial color="#fff" /></mesh>
+          <mesh position={[0, 0.025, 0]}><cylinderGeometry args={[0.038, 0.038, 0.015, 8]} /><meshLambertMaterial color="#3a1808" /></mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// ── Floor-specific office props ───────────────────────────────────────────────
 function FloorProps({ floorId }: { floorId: FloorId }) {
   const theme = FLOOR_THEMES[floorId];
 
@@ -111,29 +250,27 @@ function FloorProps({ floorId }: { floorId: FloorId }) {
     <group>
       {/* Ceiling */}
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 4, 0]}>
-        <planeGeometry args={[28, 20]} />
-        <meshLambertMaterial color="#f0eee9" />
+        <planeGeometry args={[28, 20]} /><meshLambertMaterial color="#f0eee9" />
       </mesh>
 
       {/* Walls */}
       <mesh position={[0, 2, -10]}><planeGeometry args={[28, 4]} /><meshLambertMaterial color="#eceae5" /></mesh>
       <mesh position={[0, 2,  10]} rotation={[0, Math.PI, 0]}><planeGeometry args={[28, 4]} /><meshLambertMaterial color="#f0eee9" /></mesh>
-      <mesh position={[-14, 2, 0]} rotation={[0, Math.PI / 2, 0]}><planeGeometry args={[20, 4]} /><meshLambertMaterial color="#eeeae4" /></mesh>
+      <mesh position={[-14, 2, 0]} rotation={[0,  Math.PI / 2, 0]}><planeGeometry args={[20, 4]} /><meshLambertMaterial color="#eeeae4" /></mesh>
       <mesh position={[ 14, 2, 0]} rotation={[0, -Math.PI / 2, 0]}><planeGeometry args={[20, 4]} /><meshLambertMaterial color="#f5f2ee" /></mesh>
 
-      {/* Windows */}
+      {/* Windows with glow */}
       {[-4, 0, 4].map((z, i) => (
         <group key={i} position={[13.95, 2.2, z]}>
           <mesh rotation={[0, -Math.PI / 2, 0]}>
             <planeGeometry args={[2.6, 2.2]} />
-            <meshLambertMaterial color="#c8e4f5" transparent opacity={0.88} emissive={theme.accent} emissiveIntensity={0.15} />
+            <meshLambertMaterial color="#c8e4f5" transparent opacity={0.88} emissive={theme.accent} emissiveIntensity={0.18} />
           </mesh>
-          {/* Frame */}
           {[
-            { pos: [0, 1.15, 0] as [number,number,number], size: [2.7, 0.07, 0.09] as [number,number,number] },
+            { pos: [0,  1.15, 0] as [number,number,number], size: [2.7, 0.07, 0.09] as [number,number,number] },
             { pos: [0, -1.15, 0] as [number,number,number], size: [2.7, 0.07, 0.09] as [number,number,number] },
             { pos: [-1.35, 0, 0] as [number,number,number], size: [0.07, 2.3, 0.09] as [number,number,number] },
-            { pos: [1.35, 0, 0] as [number,number,number], size: [0.07, 2.3, 0.09] as [number,number,number] },
+            { pos: [ 1.35, 0, 0] as [number,number,number], size: [0.07, 2.3, 0.09] as [number,number,number] },
           ].map((f, j) => (
             <mesh key={j} position={f.pos} rotation={[0, -Math.PI / 2, 0]}>
               <boxGeometry args={f.size} /><meshLambertMaterial color="#f8f6f2" />
@@ -142,134 +279,130 @@ function FloorProps({ floorId }: { floorId: FloorId }) {
         </group>
       ))}
 
-      {/* Floor accent strip */}
+      {/* Floor accent */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
         <planeGeometry args={[28, 20]} />
-        <meshLambertMaterial color={theme.accent} transparent opacity={0.04} />
+        <meshLambertMaterial color={theme.accent} transparent opacity={0.03} />
       </mesh>
 
-      {/* Ceiling accent lights */}
-      {[[-5, 3.96, -3], [0, 3.96, -3], [5, 3.96, -3], [-5, 3.96, 3], [0, 3.96, 3], [5, 3.96, 3]].map(([x, y, z], i) => (
+      {/* Ceiling LED strips */}
+      {[[-5, 3.96, -3],[0, 3.96, -3],[5, 3.96, -3],[-5, 3.96, 3],[0, 3.96, 3],[5, 3.96, 3]].map(([x, y, z], i) => (
         <mesh key={i} position={[x, y, z] as [number,number,number]}>
           <boxGeometry args={[0.14, 0.04, 2.8]} />
-          <meshLambertMaterial color="#fffff8" emissive={theme.accent} emissiveIntensity={0.08} />
+          <meshLambertMaterial color="#fffff8" emissive={theme.accent} emissiveIntensity={0.1} />
         </mesh>
       ))}
 
-      {/* Department sign on back wall */}
+      {/* Department sign */}
       <mesh position={[0, 3.2, -9.9]}>
         <boxGeometry args={[5, 0.5, 0.05]} />
-        <meshLambertMaterial color={theme.accent} emissive={theme.accent} emissiveIntensity={0.3} transparent opacity={0.8} />
+        <meshLambertMaterial color={theme.accent} emissive={theme.accent} emissiveIntensity={0.35} transparent opacity={0.85} />
       </mesh>
 
-      {/* Elevator door marker on left wall */}
-      <mesh position={[-13.9, 1.5, 0]}>
-        <boxGeometry args={[0.05, 2.8, 1.2]} />
-        <meshLambertMaterial color="#c8a830" emissive="#c8a830" emissiveIntensity={0.3} />
-      </mesh>
-      <mesh position={[-13.9, 0.1, 0]}>
-        <boxGeometry args={[0.05, 0.2, 1.2]} />
-        <meshLambertMaterial color="#c8a830" emissive="#c8a830" emissiveIntensity={0.5} />
-      </mesh>
-      {/* Elevator button panel */}
-      <mesh position={[-13.7, 1.2, 0.8]}>
-        <boxGeometry args={[0.06, 0.4, 0.25]} />
-        <meshLambertMaterial color="#2a2a3a" />
-      </mesh>
+      {/* Elevator door */}
+      <mesh position={[-13.9, 1.5, 0]}><boxGeometry args={[0.05, 2.8, 1.2]} /><meshLambertMaterial color="#c8a830" emissive="#c8a830" emissiveIntensity={0.3} /></mesh>
+      <mesh position={[-13.9, 0.1, 0]}><boxGeometry args={[0.05, 0.2, 1.2]} /><meshLambertMaterial color="#c8a830" emissive="#c8a830" emissiveIntensity={0.5} /></mesh>
+      <mesh position={[-13.7, 1.2, 0.8]}><boxGeometry args={[0.06, 0.4, 0.25]} /><meshLambertMaterial color="#2a2a3a" /></mesh>
       {[0.08, -0.08].map((dy, i) => (
         <mesh key={i} position={[-13.65, 1.2 + dy, 0.8]}>
           <cylinderGeometry args={[0.03, 0.03, 0.02, 8]} />
-          <meshLambertMaterial color="#f59e0b" emissive="#f59e0b" emissiveIntensity={0.5} />
+          <meshLambertMaterial color="#f59e0b" emissive="#f59e0b" emissiveIntensity={0.6} />
         </mesh>
       ))}
 
       {/* Corner plants */}
-      {[
-        { pos: [-11.5, 0, -8] as [number,number,number] },
-        { pos: [11.5, 0, -8] as [number,number,number] },
-        { pos: [-11.5, 0, 8] as [number,number,number] },
-      ].map(({ pos }, i) => (
-        <group key={i} position={pos}>
-          <mesh position={[0, 0.22, 0]}>
-            <cylinderGeometry args={[0.2, 0.16, 0.44, 8]} />
-            <meshLambertMaterial color="#a0704a" />
-          </mesh>
-          <mesh position={[0, 0.7, 0]}>
-            <cylinderGeometry args={[0.04, 0.055, 0.52, 6]} />
-            <meshLambertMaterial color="#5a3818" />
-          </mesh>
-          <mesh position={[0, 1.1, 0]}>
-            <sphereGeometry args={[0.38, 6, 5]} />
-            <meshLambertMaterial color="#2d7a3a" />
-          </mesh>
+      {[[-11.5, 0, -8],[-11.5, 0, 8],[11.5, 0, -8]].map(([x, y, z], i) => (
+        <group key={i} position={[x, y, z] as [number,number,number]}>
+          <mesh position={[0, 0.22, 0]}><cylinderGeometry args={[0.2, 0.16, 0.44, 8]} /><meshLambertMaterial color="#a0704a" /></mesh>
+          <mesh position={[0, 0.7, 0]}><cylinderGeometry args={[0.04, 0.055, 0.52, 6]} /><meshLambertMaterial color="#5a3818" /></mesh>
+          <mesh position={[0, 1.1, 0]}><sphereGeometry args={[0.4, 7, 6]} /><meshLambertMaterial color="#2d7a3a" /></mesh>
+          <mesh position={[0.2, 0.95, 0.1]}><sphereGeometry args={[0.22, 6, 5]} /><meshLambertMaterial color="#3a8a45" /></mesh>
         </group>
       ))}
 
-      {/* Desk stations furniture */}
+      {/* Desk stations */}
       {DESK_STATIONS.map((station, i) => (
         <group key={i}>
-          {/* Desk */}
           <mesh position={[station.pos[0], 0.74, station.pos[2]]}>
-            <boxGeometry args={[1.4, 0.07, 0.75]} />
-            <meshLambertMaterial color="#c8a870" />
-          </mesh>
-          {/* Monitor */}
-          <mesh position={[station.pos[0], 1.22, station.pos[2] + (station.rot === 0 ? -0.18 : 0.18)]}>
-            <boxGeometry args={[0.55, 0.35, 0.03]} />
-            <meshLambertMaterial color="#1a1a2e" emissive={theme.accent} emissiveIntensity={0.25} />
+            <boxGeometry args={[1.4, 0.07, 0.75]} /><meshLambertMaterial color="#c8a870" />
           </mesh>
           {/* Monitor stand */}
           <mesh position={[station.pos[0], 0.84, station.pos[2] + (station.rot === 0 ? -0.18 : 0.18)]}>
-            <boxGeometry args={[0.06, 0.18, 0.06]} />
-            <meshLambertMaterial color="#2a2a3a" />
+            <boxGeometry args={[0.06, 0.18, 0.06]} /><meshLambertMaterial color="#2a2a3a" />
+          </mesh>
+          {/* Animated monitor */}
+          <AnimatedMonitor pos={station.pos} rot={station.rot} accent={theme.accent} />
+          {/* Keyboard */}
+          <mesh position={[station.pos[0], 0.79, station.pos[2] + (station.rot === 0 ? 0.12 : -0.12)]}>
+            <boxGeometry args={[0.36, 0.02, 0.14]} /><meshLambertMaterial color="#1e2030" />
           </mesh>
           {/* Chair */}
           <mesh position={[station.chairPos[0], 0.44, station.chairPos[2]]}>
-            <boxGeometry args={[0.44, 0.04, 0.44]} />
-            <meshLambertMaterial color={theme.accent} />
+            <boxGeometry args={[0.44, 0.04, 0.44]} /><meshLambertMaterial color={theme.accent} />
           </mesh>
-          {/* Chair back */}
           <mesh position={[station.chairPos[0], 0.75, station.chairPos[2] + (station.rot === 0 ? 0.21 : -0.21)]}>
-            <boxGeometry args={[0.44, 0.56, 0.06]} />
-            <meshLambertMaterial color={theme.accent} />
+            <boxGeometry args={[0.44, 0.56, 0.06]} /><meshLambertMaterial color={theme.accent} />
           </mesh>
-          {/* Chair leg */}
           <mesh position={[station.chairPos[0], 0.22, station.chairPos[2]]}>
-            <cylinderGeometry args={[0.03, 0.03, 0.44, 5]} />
-            <meshLambertMaterial color="#2a3a4a" />
+            <cylinderGeometry args={[0.03, 0.03, 0.44, 5]} /><meshLambertMaterial color="#2a3a4a" />
           </mesh>
         </group>
       ))}
 
       {/* Meeting table */}
       <group position={[7, 0, 1]}>
-        <mesh position={[0, 0.74, 0]}>
-          <boxGeometry args={[2.8, 0.08, 1.4]} />
-          <meshLambertMaterial color="#c8a870" />
-        </mesh>
-        <mesh position={[0, 0.78, 0]}>
-          <boxGeometry args={[2.9, 0.04, 1.5]} />
-          <meshLambertMaterial color="#a88050" />
-        </mesh>
-        {[[-1.25, -0.55], [1.25, -0.55], [-1.25, 0.55], [1.25, 0.55]].map(([lx, lz], i) => (
+        <mesh position={[0, 0.74, 0]}><boxGeometry args={[2.8, 0.08, 1.4]} /><meshLambertMaterial color="#c8a870" /></mesh>
+        <mesh position={[0, 0.78, 0]}><boxGeometry args={[2.9, 0.04, 1.5]} /><meshLambertMaterial color="#a88050" /></mesh>
+        {[[-1.25,-0.55],[1.25,-0.55],[-1.25,0.55],[1.25,0.55]].map(([lx,lz], i) => (
           <mesh key={i} position={[lx, 0.35, lz] as [number,number,number]}>
-            <boxGeometry args={[0.07, 0.7, 0.07]} /><meshLambertMaterial color="#907040" />
+            <boxGeometry args={[0.07,0.7,0.07]} /><meshLambertMaterial color="#907040" />
           </mesh>
+        ))}
+        {/* Meeting room chairs */}
+        {[[-1.25,-0.9],[1.25,-0.9],[-1.25,0.9],[1.25,0.9],[-0.4,-0.9],[0.4,-0.9]].map(([cx,cz], i) => (
+          <mesh key={i} position={[cx, 0.44, cz] as [number,number,number]}>
+            <boxGeometry args={[0.4,0.04,0.4]} /><meshLambertMaterial color={theme.accent} transparent opacity={0.7} />
+          </mesh>
+        ))}
+        {/* Laptop on table */}
+        <mesh position={[0, 0.83, 0]}><boxGeometry args={[0.35, 0.01, 0.28]} /><meshLambertMaterial color="#1a1a2e" /></mesh>
+        <mesh position={[0, 0.97, -0.12]} rotation={[-0.45, 0, 0]}><boxGeometry args={[0.35, 0.24, 0.01]} /><meshLambertMaterial color="#1a1a2e" emissive={theme.accent} emissiveIntensity={0.2} /></mesh>
+      </group>
+
+      {/* Bookshelf */}
+      <group position={[9.5, 0, -8]}>
+        <mesh position={[0, 1, 0]}><boxGeometry args={[1.4, 2.0, 0.35]} /><meshLambertMaterial color="#a07850" /></mesh>
+        {[0.6, 1.0, 1.4].map((y, shelf) => (
+          <group key={shelf}>
+            {[[-0.4,-0.1,0.0,0.3,0.15],[-0.2,0.1,0.25,0.22,0.18],[0.0,0.05,0.2,0.18,0.16],[0.22,-0.05,0.18,0.24,0.14]].map(([xo,,,,], book) => (
+              <mesh key={book} position={[xo as number, y + 0.15, 0.02]}>
+                <boxGeometry args={[0.11, 0.32, 0.22]} />
+                <meshLambertMaterial color={["#e53e3e","#3182ce","#38a169","#d69e2e"][book % 4]} />
+              </mesh>
+            ))}
+          </group>
         ))}
       </group>
 
-      {/* Coffee machine */}
-      <group position={[-10.5, 0, -8]}>
-        <mesh position={[0, 0.55, 0]}><boxGeometry args={[0.55, 1.1, 0.45]} /><meshLambertMaterial color="#2a2a2a" /></mesh>
-        <mesh position={[0, 0.8, 0.228]}><boxGeometry args={[0.3, 0.22, 0.01]} /><meshLambertMaterial color="#1a3a5a" emissive={theme.accent} emissiveIntensity={0.4} /></mesh>
-        <mesh position={[0, 0.26, 0.22]}><boxGeometry args={[0.28, 0.02, 0.2]} /><meshLambertMaterial color="#444444" /></mesh>
-        <mesh position={[0, 0.04, 0]}><boxGeometry args={[1.2, 0.08, 0.8]} /><meshLambertMaterial color="#b08060" /></mesh>
-      </group>
+      {/* Coffee station */}
+      <CoffeeStation accent={theme.accent} />
+
+      {/* Whiteboard */}
+      <AnimatedWhiteboard accent={theme.accent} />
+
+      {/* Data particles */}
+      <DataParticles accent={theme.accent} />
     </group>
   );
 }
 
-// ── NPC simulation tick ───────────────────────────────────────────────────────
+// ── NPC simulation ────────────────────────────────────────────────────────────
+const WANDER_SPOTS: Array<[number, number]> = [
+  [-10.5, -8], [-4, -8], [9.5, -8], [-11, 7], [11, -6],
+  [7, 1], [0, 0], [-5, -3], [-1, -3], [3, -3], [-5, 3], [-1, 3], [3, 3],
+  [4, -5], [-3, 5], [6, -3], [-7, 1], [2, 6], [-8, -3], [8, 3],
+];
+
 function useNpcSimulation(npcs: NpcAgent[]) {
   const positions = useRef<Map<string, [number, number]>>(
     new Map(npcs.map(n => [n.id, [n.positionX, n.positionZ]]))
@@ -284,7 +417,7 @@ function useNpcSimulation(npcs: NpcAgent[]) {
         if (t <= 0) {
           const wander = WANDER_SPOTS[Math.floor(Math.random() * WANDER_SPOTS.length)];
           positions.current.set(npc.id, wander);
-          timers.current.set(npc.id, 5 + Math.random() * 15);
+          timers.current.set(npc.id, 6 + Math.random() * 14);
         } else {
           timers.current.set(npc.id, t - 3);
         }
@@ -297,16 +430,23 @@ function useNpcSimulation(npcs: NpcAgent[]) {
   return positions.current;
 }
 
-const WANDER_SPOTS: Array<[number, number]> = [
-  [-10.5, -8], [-4, -8], [9.5, -8], [-11, 7], [11, -6],
-  [7, 1], [0, 0], [-5, -3], [-1, -3], [3, -3], [-5, 3], [-1, 3], [3, 3],
-  [4, -5], [-3, 5], [6, -3], [-7, 1],
-];
+// ── Riding elevator overlay ───────────────────────────────────────────────────
+function ElevatorRideEffect() {
+  const ref = useRef<THREE.Mesh>(null);
+  useFrame((state) => {
+    if (!ref.current) return;
+    const mat = ref.current.material as THREE.MeshBasicMaterial;
+    mat.opacity = 0.6 + Math.sin(state.clock.elapsedTime * 8) * 0.25;
+  });
+  return (
+    <mesh ref={ref} position={[0, 2, 0]} rotation={[0, 0, 0]}>
+      <planeGeometry args={[40, 40]} />
+      <meshBasicMaterial color="#000000" transparent opacity={0.7} depthTest={false} />
+    </mesh>
+  );
+}
 
-// Import useState, useEffect for NPC sim
-import { useState, useEffect } from "react";
-
-// ── Main FloorScene ────────────────────────────────────────────────────────────
+// ── Main FloorScene ───────────────────────────────────────────────────────────
 interface Props {
   onSelectAgent: (id: number | string) => void;
   selectedAgentId: number | string | null;
@@ -322,7 +462,7 @@ function checkWebGL() {
 
 export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent }: Props) {
   const webGLAvailable = useMemo(() => checkWebGL(), []);
-  const { currentFloor, getNpcsByFloor } = useFloor();
+  const { currentFloor, getNpcsByFloor, isRiding } = useFloor();
 
   const { data: floor1Agents } = useListAgents({
     query: { refetchInterval: 2500, queryKey: getListAgentsQueryKey() },
@@ -344,7 +484,6 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent }: Prop
     return pairs;
   }, [floor1Agents, isFloor1]);
 
-  // Player start position — centre of floor
   const playerPos: [number, number, number] = [0, 0, 6];
 
   if (!webGLAvailable) return (
@@ -362,7 +501,7 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent }: Prop
           camera={{ position: [0, 14, 14], fov: 42 }}
           dpr={[1, 1.5]}
           performance={{ min: 0.5 }}
-          gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.1 }}
+          gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.15 }}
           shadows={false}
         >
           <SceneBackground />
@@ -395,7 +534,7 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent }: Prop
               />
             ))}
 
-            {/* Chat connections */}
+            {/* Chat connection lines */}
             {isFloor1 && floor1Agents && chattingPairs.map(([id1, id2]) => {
               const a1 = floor1Agents.find(a => a.id === id1);
               const a2 = floor1Agents.find(a => a.id === id2);
@@ -409,6 +548,9 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent }: Prop
                 />
               );
             })}
+
+            {/* Elevator transition effect */}
+            {isRiding && <ElevatorRideEffect />}
           </Suspense>
 
           <OrbitControls

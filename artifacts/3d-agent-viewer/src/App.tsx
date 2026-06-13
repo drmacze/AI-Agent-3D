@@ -10,7 +10,7 @@ import Layout from "@/components/layout/Layout";
 import { GameTimeProvider } from "@/context/GameTimeContext";
 import { FloorProvider } from "@/context/FloorContext";
 import { SettingsProvider } from "@/context/SettingsContext";
-import { SettingsModal } from "@/components/ui/SettingsModal";
+import { SettingsOverlay } from "@/components/ui/SettingsOverlay";
 
 const queryClient = new QueryClient();
 
@@ -48,7 +48,7 @@ function App() {
                 <Router />
               </WouterRouter>
               <Toaster />
-              <SettingsModal />
+              <SettingsOverlay />
             </TooltipProvider>
           </QueryClientProvider>
         </FloorProvider>

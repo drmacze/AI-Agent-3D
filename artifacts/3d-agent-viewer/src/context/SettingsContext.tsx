@@ -1,10 +1,15 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 
-interface Settings {
+export interface Settings {
   apiKey: string;
-  apiProvider: "openai" | "anthropic";
+  apiProvider: "openai" | "anthropic" | "openclaw";
   playerName: string;
   playerColor: string;
+  playerSkinTone: string;
+  playerHairColor: string;
+  playerHairStyle: "short" | "medium" | "long" | "bun";
+  openclawGatewayUrl: string;
+  openclawAgentId: string;
 }
 
 interface SettingsContextType {
@@ -21,6 +26,11 @@ const DEFAULT: Settings = {
   apiProvider: "openai",
   playerName: "You",
   playerColor: "#f59e0b",
+  playerSkinTone: "#f4c39a",
+  playerHairColor: "#1a0f06",
+  playerHairStyle: "short",
+  openclawGatewayUrl: "http://localhost:18789",
+  openclawAgentId: "default",
 };
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
@@ -56,7 +66,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       isSettingsOpen,
       openSettings: () => setSettingsOpen(true),
       closeSettings: () => setSettingsOpen(false),
-      hasApiKey: !!settings.apiKey.trim(),
+      hasApiKey: settings.apiProvider === "openclaw"
+        ? !!settings.openclawGatewayUrl.trim()
+        : !!settings.apiKey.trim(),
     }}>
       {children}
     </SettingsContext.Provider>
