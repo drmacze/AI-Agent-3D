@@ -1,15 +1,20 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: AI Agent 3D Viewer API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: agents
+    description: AI Agent operations
+  - name: tasks
+    description: Task operations
+  - name: messages
+    description: Agent message/chat operations
 paths:
   /healthz:
     get:
@@ -24,6 +29,128 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /agents:
+    get:
+      operationId: listAgents
+      tags: [agents]
+      summary: List all agents
+      responses:
+        "200":
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Agent"
+
+  /agents/{id}:
+    get:
+      operationId: getAgent
+      tags: [agents]
+      summary: Get agent by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Agent details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Agent"
+        "404":
+          description: Not found
+
+  /agents/{id}/messages:
+    get:
+      operationId: getAgentMessages
+      tags: [messages]
+      summary: Get recent messages for an agent
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AgentMessage"
+
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List all tasks
+      responses:
+        "200":
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+
+  /tasks/{id}:
+    get:
+      operationId: getTask
+      tags: [tasks]
+      summary: Get task by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Not found
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [agents]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /activity/feed:
+    get:
+      operationId: getActivityFeed
+      tags: [agents]
+      summary: Get recent activity feed across all agents
+      responses:
+        "200":
+          description: Activity feed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityEvent"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +161,120 @@ components:
       required:
         - status
 
+    Agent:
+      type: object
+      required: [id, name, role, status, positionX, positionZ, color]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        role:
+          type: string
+          description: "Agent role e.g. Researcher, Coder, Planner, Reviewer"
+        status:
+          type: string
+          description: "idle | working | chatting | completed | moving"
+        currentTask:
+          type: ["string", "null"]
+        positionX:
+          type: number
+          description: "3D world X position"
+        positionZ:
+          type: number
+          description: "3D world Z position"
+        color:
+          type: string
+          description: "Hex color for the agent avatar"
+        interactingWithId:
+          type: ["integer", "null"]
+          description: "ID of agent this agent is currently interacting with"
+        completedTasks:
+          type: integer
+        activeTaskId:
+          type: ["integer", "null"]
+
+    AgentMessage:
+      type: object
+      required: [id, agentId, content, timestamp, type]
+      properties:
+        id:
+          type: integer
+        agentId:
+          type: integer
+        targetAgentId:
+          type: ["integer", "null"]
+        content:
+          type: string
+        timestamp:
+          type: string
+        type:
+          type: string
+          description: "chat | broadcast | task_update | system"
+
+    Task:
+      type: object
+      required: [id, title, status, assignedAgentId, priority]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        status:
+          type: string
+          description: "pending | in_progress | completed | failed"
+        assignedAgentId:
+          type: ["integer", "null"]
+        priority:
+          type: string
+          description: "low | medium | high | critical"
+        createdAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+        progress:
+          type: integer
+          description: "0-100 completion percentage"
+
+    DashboardSummary:
+      type: object
+      required: [totalAgents, activeAgents, completedTasks, pendingTasks, inProgressTasks]
+      properties:
+        totalAgents:
+          type: integer
+        activeAgents:
+          type: integer
+        completedTasks:
+          type: integer
+        pendingTasks:
+          type: integer
+        inProgressTasks:
+          type: integer
+        totalMessages:
+          type: integer
+
+    ActivityEvent:
+      type: object
+      required: [id, agentId, agentName, eventType, description, timestamp]
+      properties:
+        id:
+          type: integer
+        agentId:
+          type: integer
+        agentName:
+          type: string
+        eventType:
+          type: string
+          description: "task_started | task_completed | chat | status_change | movement"
+        description:
+          type: string
+        timestamp:
+          type: string
+
+    DashboardSummaryBorderType:
+      type: object
+      properties:
+        placeholder:
+          type: string
