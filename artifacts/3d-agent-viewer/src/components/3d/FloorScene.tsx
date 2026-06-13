@@ -95,8 +95,7 @@ function DynamicLights({ floorId }: { floorId: FloorId }) {
 
 function SceneBackground() {
   const { lightConfig } = useGameTime();
-  useFrame(({ scene }) => { scene.background = new THREE.Color(lightConfig.bgColor); });
-  return null;
+  return <color attach="background" args={[lightConfig.bgColor]} />;
 }
 
 // ── Animated monitor screens ──────────────────────────────────────────────────
