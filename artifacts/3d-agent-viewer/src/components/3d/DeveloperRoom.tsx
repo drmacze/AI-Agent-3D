@@ -131,7 +131,7 @@ export function DeveloperRoom() {
         </mesh>
         <Html position={[0, 0, 0.08]} center style={{ pointerEvents: 'none' }}>
           <div style={{ fontSize: 9, fontWeight: 800, color: '#c4b5fd', letterSpacing: 1, textShadow: '0 0 8px #7c3aed', whiteSpace: 'nowrap' }}>
-            {isDev ? '⚡ DRMACZE' : '🔐 DRMACZE'}
+            {isDev ? 'DEV · DRMACZE' : 'DRMACZE'}
           </div>
         </Html>
       </group>
@@ -141,7 +141,7 @@ export function DeveloperRoom() {
         <div onClick={handleDoorClick}
           style={{ cursor: 'pointer', fontSize: 22, filter: isDev ? 'drop-shadow(0 0 8px #7c3aed)' : 'none', userSelect: 'none' }}
           title={isDev ? 'Developer Room — Click to open' : 'Access Denied — Developer only'}>
-          {isDev ? (doorAjar ? '🟢' : '🔓') : '🔒'}
+          {isDev ? (doorAjar ? '▶' : '○') : '×'}
         </div>
       </Html>
 
@@ -176,7 +176,7 @@ export function DeveloperRoom() {
           {/* Dev room plaque */}
           <Html position={[-0.8, 2.5, -1.45]} center style={{ pointerEvents: 'none' }}>
             <div style={{ background: 'rgba(124,58,237,0.2)', border: '1px solid rgba(124,58,237,0.4)', borderRadius: 8, padding: '4px 10px', color: '#c4b5fd', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', textShadow: '0 0 10px #7c3aed' }}>
-              ⚡ Developer Mode — Welcome, {user?.username}
+              DEV MODE — Welcome, {user?.username}
             </div>
           </Html>
 

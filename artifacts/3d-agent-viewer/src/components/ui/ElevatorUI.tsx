@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useFloor, FLOOR_THEMES, type FloorId } from "@/context/FloorContext";
-import { X, ArrowUp, ArrowDown } from "lucide-react";
+import { X, ArrowUp, ArrowDown, Layers } from "lucide-react";
 
 function ElevatorRidePanel() {
   const { currentFloor, ridingFrom, ridingTo } = useFloor();
@@ -74,10 +74,15 @@ function ElevatorRidePanel() {
 
           {/* Center display — visible when opening */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-300"
+            className="absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-300 gap-1"
             style={{ opacity: phase === "opening" ? 1 : 0 }}
           >
-            <div className="text-5xl mb-1">{theme.emoji}</div>
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg"
+              style={{ background: `${theme.accent}25`, border: `2px solid ${theme.accent}60`, color: theme.accent }}
+            >
+              {to}
+            </div>
             <div className="text-white font-bold text-sm">{theme.name}</div>
             <div className="text-white/40 text-xs">{theme.department}</div>
           </div>
@@ -163,7 +168,9 @@ export function ElevatorUI() {
           {/* Header */}
           <div className="px-5 py-4 flex items-center justify-between border-b border-white/10">
             <div className="flex items-center gap-2.5">
-              <span className="text-2xl">🛗</span>
+              <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center">
+                <Layers className="w-4 h-4 text-yellow-400" />
+              </div>
               <div>
                 <p className="text-white font-bold text-sm">DLavie Elevator</p>
                 <p className="text-white/40 text-xs">Lantai saat ini: {currentFloor}</p>
@@ -205,7 +212,6 @@ export function ElevatorUI() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm">{theme.emoji}</span>
                       <span className={`text-sm font-semibold ${isCurrent ? "text-yellow-400" : "text-white"}`}>
                         {theme.name}
                       </span>

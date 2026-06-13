@@ -209,7 +209,7 @@ export function PlayerAvatar({ position, isMoving = false, targetPosition }: Pro
             className="px-2.5 py-1 rounded-full text-[10px] font-bold shadow-lg whitespace-nowrap"
             style={{ background: color, color: "#fff", border: "2px solid rgba(255,255,255,0.5)", textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}
           >
-            👑 {name}
+            {name}
           </div>
         </Html>
       </group>

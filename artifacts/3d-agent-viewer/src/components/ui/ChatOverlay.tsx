@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { X, Send, Bot, User, Wifi, WifiOff, Loader2, AlertCircle, Zap } from "lucide-react";
+import { X, Send, Bot, User, Wifi, WifiOff, Loader2, AlertCircle, Zap, Link } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
 import type { NpcAgent } from "@/context/FloorContext";
 import type { Agent } from "@workspace/api-client-react";
@@ -34,8 +34,8 @@ export function ChatOverlay({ agent, onClose }: Props) {
   const agentRole  = agent.role;
   const agentColor = agent.color;
   const isOpenClaw = settings.apiProvider === "openclaw";
-  const isGroq = settings.apiProvider === "groq";
-  const isKimi = settings.apiProvider === "kimi";
+  const isGroq     = settings.apiProvider === "groq";
+  const isKimi     = settings.apiProvider === "kimi";
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -141,7 +141,7 @@ export function ChatOverlay({ agent, onClose }: Props) {
         const msg = err instanceof Error ? err.message : "Unknown error";
         setError(msg);
         setMessages(prev => prev.map(m =>
-          m.id === agentMsgId ? { ...m, content: `⚠️ ${msg}`, streaming: false } : m
+          m.id === agentMsgId ? { ...m, content: `Error: ${msg}`, streaming: false } : m
         ));
       }
     } finally {
@@ -155,19 +155,19 @@ export function ChatOverlay({ agent, onClose }: Props) {
   };
 
   const providerBadge = isOpenClaw
-    ? <span className="flex items-center gap-1 text-xs text-orange-200 ml-1"><span>🦞</span><span>OpenClaw</span></span>
+    ? <span className="flex items-center gap-1 text-xs text-white/60 ml-1"><Link className="w-3 h-3" /><span>OpenClaw</span></span>
     : isGroq
-      ? <span className="flex items-center gap-1 text-xs text-purple-200 ml-1"><Zap className="w-3 h-3" /><span>Groq</span></span>
+      ? <span className="flex items-center gap-1 text-xs text-white/60 ml-1"><Zap className="w-3 h-3" /><span>Groq</span></span>
       : isKimi
-        ? <span className="flex items-center gap-1 text-xs text-blue-200 ml-1"><span>🌙</span><span>Kimi 2.6</span></span>
+        ? <span className="flex items-center gap-1 text-xs text-white/60 ml-1"><span>Kimi</span></span>
         : hasApiKey
-          ? <span className="flex items-center gap-1 text-xs text-white/70 ml-1"><Wifi className="w-3 h-3" /><span>AI Live</span></span>
+          ? <span className="flex items-center gap-1 text-xs text-white/60 ml-1"><Wifi className="w-3 h-3" /><span>Live</span></span>
           : <span className="flex items-center gap-1 text-xs text-amber-200 ml-1"><WifiOff className="w-3 h-3" /><span>No API Key</span></span>;
 
   return (
     <div
       className="fixed inset-0 z-[7000] flex items-end sm:items-center justify-center p-0 sm:p-4"
-      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(5px)" }}
+      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(6px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
@@ -180,22 +180,22 @@ export function ChatOverlay({ agent, onClose }: Props) {
         {/* Header */}
         <div
           className="px-3 py-2.5 flex items-center justify-between shrink-0"
-          style={{ background: `linear-gradient(135deg, ${agentColor}ee, ${agentColor}99)` }}
+          style={{ background: `linear-gradient(135deg, ${agentColor}dd, ${agentColor}99)` }}
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-sm shrink-0"
-              style={{ background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.35)" }}
+              style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.28)" }}
             >
               <Bot className="w-4 h-4 text-white" />
             </div>
             <div className="min-w-0">
-              <div className="text-white font-bold text-sm leading-tight truncate">{agentName}</div>
-              <div className="text-white/70 text-xs truncate">{agentRole}</div>
+              <div className="text-white font-semibold text-sm leading-tight truncate">{agentName}</div>
+              <div className="text-white/60 text-xs truncate">{agentRole}</div>
             </div>
             {providerBadge}
           </div>
-          <button onClick={onClose} className="text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/15 transition-colors shrink-0 ml-2">
+          <button onClick={onClose} className="text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/15 transition-colors shrink-0 ml-2">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -208,33 +208,35 @@ export function ChatOverlay({ agent, onClose }: Props) {
             <button onClick={openSettings} className="ml-auto font-semibold underline">Open Settings</button>
           </div>
         )}
+
+        {/* OpenClaw status banner */}
         {isOpenClaw && (
-          <div className="px-4 py-2 bg-orange-50 border-b border-orange-100 flex items-center gap-2 text-xs text-orange-700">
-            <span>🦞</span>
-            <span>Powered by OpenClaw — make sure your gateway is running</span>
-            <button onClick={openSettings} className="ml-auto font-semibold underline">Settings</button>
+          <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100 flex items-center gap-2 text-xs text-indigo-700">
+            <Link className="w-3.5 h-3.5 shrink-0" />
+            <span>Connected via OpenClaw · <span className="font-mono opacity-60 text-[11px]">{settings.openclawGatewayUrl}</span></span>
+            <button onClick={openSettings} className="ml-auto font-semibold underline shrink-0">Configure</button>
           </div>
         )}
 
         {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-2.5 space-y-2 bg-gray-50" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2.5 bg-gray-50" style={{ WebkitOverflowScrolling: "touch" }}>
           {messages.map(msg => (
             <div key={msg.id} className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
                 style={{
-                  background: msg.role === "agent" ? `${agentColor}22` : "#f1f5f9",
-                  border: msg.role === "agent" ? `1.5px solid ${agentColor}44` : "1.5px solid #e2e8f0",
+                  background: msg.role === "agent" ? `${agentColor}1a` : "#f1f5f9",
+                  border: msg.role === "agent" ? `1.5px solid ${agentColor}33` : "1.5px solid #e2e8f0",
                 }}
               >
                 {msg.role === "agent"
                   ? <Bot  className="w-3.5 h-3.5" style={{ color: agentColor }} />
-                  : <User className="w-3.5 h-3.5 text-gray-500" />}
+                  : <User className="w-3.5 h-3.5 text-gray-400" />}
               </div>
               <div
                 className={`max-w-[78%] px-3 py-2 rounded-2xl text-sm leading-relaxed ${
                   msg.role === "user"
-                    ? "bg-blue-600 text-white rounded-tr-sm"
+                    ? "bg-indigo-600 text-white rounded-tr-sm"
                     : "bg-white text-gray-800 border border-gray-100 rounded-tl-sm shadow-sm"
                 }`}
               >
@@ -250,6 +252,12 @@ export function ChatOverlay({ agent, onClose }: Props) {
               </div>
             </div>
           ))}
+          {error && (
+            <div className="flex items-center gap-2 text-xs text-red-500 px-1">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
         </div>
 
         {/* Input */}
@@ -260,7 +268,7 @@ export function ChatOverlay({ agent, onClose }: Props) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={hasApiKey || isOpenClaw ? `Talk to ${agentName}...` : "Set API key to chat"}
+            placeholder={hasApiKey || isOpenClaw ? `Message ${agentName}...` : "Set API key to chat"}
             disabled={isStreaming}
             className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:border-transparent bg-gray-50 disabled:opacity-50 transition-all"
             style={{ "--tw-ring-color": agentColor } as React.CSSProperties}
@@ -268,7 +276,7 @@ export function ChatOverlay({ agent, onClose }: Props) {
           <button
             onClick={sendMessage}
             disabled={!input.trim() || isStreaming || (!hasApiKey && !isOpenClaw)}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-white transition-all disabled:opacity-40 active:scale-95"
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-white transition-all disabled:opacity-35 active:scale-95"
             style={{ background: agentColor }}
           >
             {isStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -284,19 +292,19 @@ function getGreeting(agent: ChatAgent): string {
     const npc = agent as NpcAgent;
     const greetings = [
       `Hey! I'm ${npc.name}, ${npc.role} here. Right now I'm working on "${npc.currentTask}". What's on your mind?`,
-      `Oh, a visitor! I'm ${npc.name} from the ${npc.department} team. I was just deep in some work — what can I help you with?`,
-      `Hi there! ${npc.name} here — ${npc.role} in ${npc.department}. Ask me anything, I love talking about my work!`,
+      `Oh, a visitor! I'm ${npc.name} from the ${npc.department} team. What can I help you with?`,
+      `Hi there! ${npc.name} here — ${npc.role} in ${npc.department}. Ask me anything!`,
     ];
     return greetings[Math.floor(Math.random() * greetings.length)];
   } else {
     const a = agent as Agent;
     const roles: Record<string, string> = {
       "AI Architect":   `Greetings. I'm ${a.name}, the AI Architect here. I oversee the intelligence layer. What would you like to know?`,
-      "ML Engineer":    `Hey! ${a.name} here. My models are training — I've got a moment to chat. What's up?`,
-      "Full-Stack Dev": `Yo! ${a.name}. Just pushed some code. What do you need?`,
-      "DevOps Lead":    `${a.name} speaking. Infrastructure's stable, I can talk. What's on your mind?`,
-      "UX Designer":    `Hi! I'm ${a.name}. Refining wireframes — always happy for a creative break. What brings you over?`,
-      "Product Manager":`Hey! ${a.name} here. I'm between standups — perfect timing. What can I do for you?`,
+      "ML Engineer":    `Hey! ${a.name} here. My models are training — I've got a moment. What's up?`,
+      "Full-Stack Dev": `Yo, ${a.name} here. Just pushed some code. What do you need?`,
+      "DevOps Lead":    `${a.name} speaking. Infrastructure's stable. What's on your mind?`,
+      "UX Designer":    `Hi! I'm ${a.name}. Refining wireframes — happy for a break. What brings you here?`,
+      "Product Manager":`Hey! ${a.name} here. Between standups — perfect timing. What can I do for you?`,
     };
     return roles[a.role] ?? `Hi, I'm ${a.name}. How can I help you?`;
   }

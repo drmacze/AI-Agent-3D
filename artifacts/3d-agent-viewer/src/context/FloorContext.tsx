@@ -17,12 +17,12 @@ export interface NpcAgent {
   specialty?: string;
 }
 
-export const FLOOR_THEMES: Record<FloorId, { name: string; color: string; accent: string; emoji: string; department: string }> = {
-  1: { name: "Engineering",   color: "#1e3a5f", accent: "#3b82f6", emoji: "⚙️",  department: "Core Dev" },
-  2: { name: "Design Studio", color: "#3d1f5f", accent: "#a855f7", emoji: "🎨",  department: "UX & Brand" },
-  3: { name: "Data & AI",     color: "#1a4a3a", accent: "#10b981", emoji: "🧠",  department: "AI Research" },
-  4: { name: "Operations",    color: "#4a3000", accent: "#f59e0b", emoji: "🚀",  department: "DevOps" },
-  5: { name: "Executive",     color: "#3a1a1a", accent: "#ef4444", emoji: "👔",  department: "Leadership" },
+export const FLOOR_THEMES: Record<FloorId, { name: string; color: string; accent: string; department: string }> = {
+  1: { name: "Engineering",   color: "#1e3a5f", accent: "#3b82f6", department: "Core Dev" },
+  2: { name: "Design Studio", color: "#3d1f5f", accent: "#a855f7", department: "UX & Brand" },
+  3: { name: "Data & AI",     color: "#1a4a3a", accent: "#10b981", department: "AI Research" },
+  4: { name: "Operations",    color: "#4a3000", accent: "#f59e0b", department: "DevOps" },
+  5: { name: "Executive",     color: "#3a1a1a", accent: "#ef4444", department: "Leadership" },
 };
 
 const NPC_AGENTS: NpcAgent[] = [

@@ -30,7 +30,9 @@ class WebGLErrorBoundary extends Component<{ children: ReactNode }, { failed: bo
     if (this.state.failed) return (
       <div className="w-full h-full flex items-center justify-center bg-[#1a1a2e]">
         <div className="text-center text-gray-300 space-y-2">
-          <div className="text-4xl">🏢</div>
+          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-2">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-400"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          </div>
           <p className="font-semibold">DLavie OS Office</p>
           <p className="text-sm text-gray-500">WebGL required</p>
         </div>
@@ -483,7 +485,9 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
   if (!webGLAvailable) return (
     <div className="w-full h-full flex items-center justify-center bg-[#1a1a2e]">
       <div className="text-center text-gray-300 space-y-2">
-        <div className="text-4xl">🏢</div><p>WebGL required</p>
+        <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-1">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{color:"#9ca3af"}}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          </div><p>WebGL required</p>
       </div>
     </div>
   );

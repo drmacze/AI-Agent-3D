@@ -226,7 +226,9 @@ export default function Home() {
           className="fixed inset-0 z-[9000] flex flex-col items-center justify-center gap-4 pointer-events-none"
           style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(4px)" }}
         >
-          <div style={{ fontSize: 56, animation: "spin90 1.2s ease-in-out infinite alternate" }}>📱</div>
+          <div style={{ animation: "spin90 1.2s ease-in-out infinite alternate", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1"/></svg>
+          </div>
           <div className="text-white font-bold text-base text-center px-6">Putar perangkat ke landscape</div>
           <div className="text-white/50 text-xs text-center px-8">Untuk pengalaman terbaik di mode 3D</div>
           <style>{`@keyframes spin90 { from { transform: rotate(0deg); } to { transform: rotate(90deg); } }`}</style>

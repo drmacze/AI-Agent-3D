@@ -23,7 +23,6 @@ export interface GameTime {
   minute: number;
   timeString: string;
   phase: TimePhase;
-  phaseEmoji: string;
   lightConfig: LightConfig;
 }
 
@@ -72,11 +71,6 @@ const LIGHT_CONFIGS: Record<TimePhase, LightConfig> = {
   },
 };
 
-const PHASE_EMOJI: Record<TimePhase, string> = {
-  night: "🌙", dawn: "🌅", morning: "☀️",
-  afternoon: "🌤️", evening: "🌆", dusk: "🌇",
-};
-
 function getPhase(hour: number): TimePhase {
   if (hour >= 5 && hour < 7)  return "dawn";
   if (hour >= 7 && hour < 12) return "morning";
@@ -95,7 +89,6 @@ function buildGameTime(totalMinutes: number): GameTime {
   return {
     hour, minute, phase,
     timeString: `${String(h12).padStart(2, "0")}:${String(minute).padStart(2, "0")} ${ampm}`,
-    phaseEmoji: PHASE_EMOJI[phase],
     lightConfig: LIGHT_CONFIGS[phase],
   };
 }

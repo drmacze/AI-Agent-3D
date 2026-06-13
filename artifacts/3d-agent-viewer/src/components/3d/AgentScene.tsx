@@ -23,7 +23,9 @@ class WebGLErrorBoundary extends Component<{ children: ReactNode }, { failed: bo
       return (
         <div className="w-full h-full flex items-center justify-center bg-[#e8e4de]">
           <div className="text-center text-gray-500 space-y-2">
-            <div className="text-4xl">🏢</div>
+            <div className="w-12 h-12 rounded-xl bg-gray-200 flex items-center justify-center mb-2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-400"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            </div>
             <p className="font-semibold text-gray-700">DLavie OS Office</p>
             <p className="text-sm">3D view requires WebGL — open on a real device or browser</p>
           </div>
@@ -126,7 +128,9 @@ export function AgentScene({ onSelectAgent, selectedAgentId }: Props) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-[#e8e4de]">
         <div className="text-center text-gray-500 space-y-2">
-          <div className="text-4xl">🏢</div>
+          <div className="w-12 h-12 rounded-xl bg-gray-200 flex items-center justify-center mb-2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{color:"#9ca3af"}}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            </div>
           <p className="font-semibold text-gray-700">DLavie OS Office</p>
           <p className="text-sm">3D view requires WebGL — open on a real device or browser</p>
         </div>

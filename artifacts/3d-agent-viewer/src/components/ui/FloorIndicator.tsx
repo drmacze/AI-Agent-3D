@@ -24,10 +24,9 @@ export function FloorIndicator() {
 
       <div className="flex flex-col items-start">
         <div className="flex items-center gap-1.5">
-          <span className="text-base leading-none">{theme.emoji}</span>
           <span className="text-white font-bold text-sm leading-none">{theme.name}</span>
         </div>
-        <span className="text-white/50 text-[10px] mt-0.5">Tap to use elevator 🛗</span>
+        <span className="text-white/50 text-[10px] mt-0.5">Tap to use elevator</span>
       </div>
 
       {/* Signal dots */}

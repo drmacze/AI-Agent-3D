@@ -15,25 +15,25 @@ function hash(n: number) { return ((Math.sin(n * 127.1) * 43758.5) % 1 + 1) % 1;
 
 type LiveStatus = NpcAgent["status"] | "phone" | "stretch";
 
-function getActivityEmoji(agent: NpcAgent, status: LiveStatus): { emoji: string; label: string } {
-  if (status === "coffee")     return { emoji: "☕", label: "Coffee" };
-  if (status === "presenting") return { emoji: "📊", label: "Presenting" };
-  if (status === "chatting")   return { emoji: "💬", label: "Chatting" };
-  if (status === "phone")      return { emoji: "📱", label: "On Call" };
-  if (status === "stretch")    return { emoji: "🤸", label: "Stretching" };
-  if (status === "idle")       return { emoji: "💤", label: "Idle" };
+function getActivityLabel(agent: NpcAgent, status: LiveStatus): string {
+  if (status === "coffee")     return "Coffee";
+  if (status === "presenting") return "Presenting";
+  if (status === "chatting")   return "Chatting";
+  if (status === "phone")      return "On Call";
+  if (status === "stretch")    return "Stretching";
+  if (status === "idle")       return "Idle";
   const t = agent.currentTask.toLowerCase();
-  if (t.includes("design") || t.includes("ui")) return { emoji: "🎨", label: "Designing" };
-  if (t.includes("code") || t.includes("build") || t.includes("develop")) return { emoji: "⌨️", label: "Coding" };
-  if (t.includes("train") || t.includes("model") || t.includes("ml")) return { emoji: "🧠", label: "Training" };
-  if (t.includes("data") || t.includes("analyz")) return { emoji: "📊", label: "Analyzing" };
-  if (t.includes("deploy") || t.includes("infra") || t.includes("kube")) return { emoji: "🚀", label: "Deploying" };
-  if (t.includes("review") || t.includes("audit")) return { emoji: "🔍", label: "Reviewing" };
-  if (t.includes("meet") || t.includes("align") || t.includes("coord")) return { emoji: "📋", label: "Meeting" };
-  if (t.includes("report") || t.includes("strat") || t.includes("budget")) return { emoji: "📈", label: "Planning" };
-  if (t.includes("research") || t.includes("paper")) return { emoji: "🔬", label: "Researching" };
-  if (t.includes("test") || t.includes("pen")) return { emoji: "🧪", label: "Testing" };
-  return { emoji: "💼", label: "Working" };
+  if (t.includes("design") || t.includes("ui")) return "Designing";
+  if (t.includes("code") || t.includes("build") || t.includes("develop")) return "Coding";
+  if (t.includes("train") || t.includes("model") || t.includes("ml")) return "Training";
+  if (t.includes("data") || t.includes("analyz")) return "Analyzing";
+  if (t.includes("deploy") || t.includes("infra") || t.includes("kube")) return "Deploying";
+  if (t.includes("review") || t.includes("audit")) return "Reviewing";
+  if (t.includes("meet") || t.includes("align") || t.includes("coord")) return "Meeting";
+  if (t.includes("report") || t.includes("strat") || t.includes("budget")) return "Planning";
+  if (t.includes("research") || t.includes("paper")) return "Researching";
+  if (t.includes("test") || t.includes("pen")) return "Testing";
+  return "Working";
 }
 
 interface Props {
@@ -336,7 +336,7 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
     }
   });
 
-  const activity = getActivityEmoji(agent, liveStatus.current);
+  const activityLabel = getActivityLabel(agent, liveStatus.current);
 
   return (
     <group ref={groupRef} position={[agent.positionX, 0, agent.positionZ]}
@@ -455,7 +455,7 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
               backdropFilter: 'blur(8px)', boxShadow: `0 4px 18px rgba(0,0,0,0.5), 0 0 8px ${accentColor}30`,
               animation: 'none', whiteSpace: 'normal',
             }}>
-              💬 {bubble.text}
+              {bubble.text}
             </div>
           </Html>
         )}
@@ -464,11 +464,12 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
         <Html position={[0, 0.46, 0]} center zIndexRange={[100, 0]} className="pointer-events-none select-none">
           <div className="flex flex-col items-center gap-0.5">
             <div
-              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold shadow-md whitespace-nowrap"
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold shadow-md whitespace-nowrap"
               style={{ background: "rgba(255,255,255,0.92)", border: `1.5px solid ${accentColor}50`, color: accentColor, backdropFilter: "blur(4px)" }}
             >
-              <span style={{ fontSize: 11 }}>{activity.emoji}</span>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: accentColor, display: "inline-block", flexShrink: 0 }} />
               <span>{agent.name}</span>
+              <span style={{ opacity: 0.55, fontSize: 9, fontWeight: 400 }}>{activityLabel}</span>
             </div>
           </div>
         </Html>

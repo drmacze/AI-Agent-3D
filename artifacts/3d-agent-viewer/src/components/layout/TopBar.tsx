@@ -1,8 +1,16 @@
 import { Link, useLocation } from "wouter";
 import { useGetDashboardSummary, getGetDashboardSummaryQueryKey } from "@workspace/api-client-react";
-import { Users, CheckCircle2, Clock, LayoutDashboard, ListTodo, Building2, Settings } from "lucide-react";
+import { Users, CheckCircle2, Clock, LayoutDashboard, ListTodo, Building2, Settings, Sun, Moon, Sunrise, Sunset } from "lucide-react";
 import { useGameTime } from "@/context/GameTimeContext";
 import { useSettings } from "@/context/SettingsContext";
+
+function PhaseIcon({ phase }: { phase: string }) {
+  const sz = 13;
+  if (phase === "morning") return <Sunrise size={sz} className="text-amber-400" />;
+  if (phase === "day")     return <Sun     size={sz} className="text-yellow-400" />;
+  if (phase === "sunset")  return <Sunset  size={sz} className="text-orange-400" />;
+  return                          <Moon    size={sz} className="text-indigo-300" />;
+}
 
 export function TopBar() {
   const { data: summary } = useGetDashboardSummary({
@@ -10,7 +18,8 @@ export function TopBar() {
   });
   const [location] = useLocation();
   const gameTime = useGameTime();
-  const { openSettings, hasApiKey } = useSettings();
+  const { openSettings, hasApiKey, settings } = useSettings();
+  const isOpenClaw = settings.apiProvider === "openclaw";
 
   return (
     <header className="h-12 border-b border-border bg-white/95 backdrop-blur-sm z-50 flex items-center justify-between px-4 sticky top-0 shadow-sm">
@@ -53,8 +62,8 @@ export function TopBar() {
       </div>
 
       {/* Centre — game clock */}
-      <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gray-50 border border-gray-200 select-none">
-        <span className="text-base leading-none">{gameTime.phaseEmoji}</span>
+      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-50 border border-gray-200 select-none">
+        <PhaseIcon phase={gameTime.phase} />
         <span className="font-mono text-sm font-semibold text-gray-800 tabular-nums">
           {gameTime.timeString}
         </span>
@@ -87,12 +96,18 @@ export function TopBar() {
         <button
           onClick={openSettings}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all hover:bg-gray-100 ${
-            hasApiKey ? "text-green-600" : "text-amber-600 bg-amber-50 hover:bg-amber-100"
+            isOpenClaw
+              ? "text-indigo-600"
+              : hasApiKey
+                ? "text-green-600"
+                : "text-amber-600 bg-amber-50 hover:bg-amber-100"
           }`}
           title="Settings"
         >
           <Settings className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">{hasApiKey ? "API ✓" : "Set API Key"}</span>
+          <span className="hidden sm:inline">
+            {isOpenClaw ? "OpenClaw" : hasApiKey ? "API Connected" : "Set API Key"}
+          </span>
         </button>
       </div>
     </header>

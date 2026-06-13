@@ -35,14 +35,14 @@ const JACKET_COLORS = [
   "#1e293b", "#374151", "#6d28d9", "#065f46",
 ];
 
-function VolumeSlider({ label, value, onChange, icon }: {
-  label: string; value: number; onChange: (v: number) => void; icon: string;
+function VolumeSlider({ label, value, onChange }: {
+  label: string; value: number; onChange: (v: number) => void;
 }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-          <span>{icon}</span> {label}
+        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          {label}
         </label>
         <span className="text-xs font-bold text-gray-700">{Math.round(value * 100)}%</span>
       </div>
@@ -133,11 +133,11 @@ export function SettingsOverlay() {
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Provider</label>
                 <div className="grid grid-cols-2 gap-2">
                   {([
-                    { id: "openai",    label: "🤖 OpenAI",    sub: "GPT-4o mini" },
-                    { id: "anthropic", label: "🔮 Anthropic",  sub: "Claude 3 Haiku" },
-                    { id: "groq",      label: "⚡ Groq",       sub: "Llama 3.3 70B" },
-                    { id: "kimi",      label: "🌙 Kimi 2.6",   sub: "Moonshot AI" },
-                    { id: "openclaw",  label: "🦞 OpenClaw",   sub: "Local gateway" },
+                    { id: "openai",    label: "OpenAI",    sub: "GPT-4o mini" },
+                    { id: "anthropic", label: "Anthropic",  sub: "Claude 3 Haiku" },
+                    { id: "groq",      label: "Groq",       sub: "Llama 3.3 70B" },
+                    { id: "kimi",      label: "Kimi 2.6",   sub: "Moonshot AI" },
+                    { id: "openclaw",  label: "OpenClaw",   sub: "No key needed" },
                   ] as const).map(({ id, label, sub }) => (
                     <button key={id} onClick={() => updateSettings({ apiProvider: id })}
                       className={`py-2.5 px-3 rounded-xl text-left border-2 transition-all ${
@@ -175,7 +175,7 @@ export function SettingsOverlay() {
                         className="underline hover:text-blue-500">{c.link}</a>
                     </p>
                     {settings.apiKey && (
-                      <p className="text-xs text-green-600 mt-1">✓ Key saved locally — never sent to our servers</p>
+                      <p className="text-xs text-green-600 mt-1">Key saved locally — never sent to our servers</p>
                     )}
                   </div>
                 );
@@ -183,7 +183,7 @@ export function SettingsOverlay() {
 
               {settings.apiProvider === "openclaw" && (
                 <div className="rounded-xl bg-orange-50 border border-orange-200 p-3 text-xs text-orange-700 space-y-1.5">
-                  <p className="font-semibold">🦞 OpenClaw selected</p>
+                  <p className="font-semibold">OpenClaw selected</p>
                   <p>Go to the <strong>OpenClaw tab</strong> to configure the gateway URL and agent ID.</p>
                 </div>
               )}
@@ -258,7 +258,7 @@ export function SettingsOverlay() {
                     <div className="w-12 h-8 rounded-b-xl mt-0.5" style={{ background: settings.playerColor }} />
                     <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[8px] font-bold whitespace-nowrap"
                       style={{ background: settings.playerColor, color: "#fff" }}>
-                      👑 {settings.playerName || "You"}
+                      {settings.playerName || "You"}
                     </div>
                   </div>
                 </div>
@@ -270,7 +270,7 @@ export function SettingsOverlay() {
           {tab === "audio" && (
             <>
               <div className="rounded-xl bg-blue-50 border border-blue-100 p-3 flex items-center gap-3">
-                <span className="text-2xl">🎵</span>
+                <Volume2 className="w-5 h-5 text-blue-600 shrink-0" />
                 <div>
                   <p className="text-sm font-bold text-blue-800">Office Soundscape</p>
                   <p className="text-xs text-blue-600">Procedural audio — no downloads needed</p>
@@ -278,33 +278,21 @@ export function SettingsOverlay() {
               </div>
 
               <div className="space-y-5">
-                <VolumeSlider
-                  label="Master Volume" icon="🔊"
-                  value={settings.masterVolume}
-                  onChange={v => updateSettings({ masterVolume: v })}
-                />
-                <VolumeSlider
-                  label="Music Volume" icon="🎵"
-                  value={settings.musicVolume}
-                  onChange={v => updateSettings({ musicVolume: v })}
-                />
-                <VolumeSlider
-                  label="SFX Volume" icon="💥"
-                  value={settings.sfxVolume}
-                  onChange={v => updateSettings({ sfxVolume: v })}
-                />
+                <VolumeSlider label="Master Volume" value={settings.masterVolume} onChange={v => updateSettings({ masterVolume: v })} />
+                <VolumeSlider label="Music Volume"  value={settings.musicVolume}  onChange={v => updateSettings({ musicVolume: v })} />
+                <VolumeSlider label="SFX Volume"    value={settings.sfxVolume}    onChange={v => updateSettings({ sfxVolume: v })} />
               </div>
 
               <div className="pt-1 space-y-2">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Test Sounds</p>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { label: "👣 Footstep", action: () => { audioManager.resume(); audioManager.playFootstep(false); } },
-                    { label: "🏃 Running",  action: () => { audioManager.resume(); audioManager.playFootstep(true); } },
-                    { label: "💥 Bump",     action: () => { audioManager.resume(); audioManager.playBump(); } },
-                    { label: "💬 NPC Chat", action: () => { audioManager.resume(); audioManager.playNpcChat("test", Math.floor(Math.random() * 7)); } },
-                    { label: "🦘 Jump",     action: () => { audioManager.resume(); audioManager.playJump(); } },
-                    { label: "🛬 Land",     action: () => { audioManager.resume(); audioManager.playLand(); } },
+                    { label: "Footstep", action: () => { audioManager.resume(); audioManager.playFootstep(false); } },
+                    { label: "Running",  action: () => { audioManager.resume(); audioManager.playFootstep(true); } },
+                    { label: "Bump",     action: () => { audioManager.resume(); audioManager.playBump(); } },
+                    { label: "NPC Chat", action: () => { audioManager.resume(); audioManager.playNpcChat("test", Math.floor(Math.random() * 7)); } },
+                    { label: "Jump",     action: () => { audioManager.resume(); audioManager.playJump(); } },
+                    { label: "Land",     action: () => { audioManager.resume(); audioManager.playLand(); } },
                   ].map(({ label, action }) => (
                     <button key={label} onClick={action}
                       className="py-2 px-1 rounded-xl text-xs font-semibold border-2 border-gray-200 text-gray-600 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 transition-all active:scale-95">
@@ -332,7 +320,7 @@ export function SettingsOverlay() {
                       className={`py-2 rounded-xl text-xs font-bold border-2 transition-all capitalize ${
                         settings.graphicsQuality === q ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-500 hover:border-gray-300"
                       }`}>
-                      {q === "low" ? "🐢 Low" : q === "medium" ? "⚡ Med" : q === "high" ? "🚀 High" : "💎 Ultra"}
+                      {q === "low" ? "Low" : q === "medium" ? "Med" : q === "high" ? "High" : "Ultra"}
                     </button>
                   ))}
                 </div>
@@ -405,7 +393,7 @@ export function SettingsOverlay() {
             <>
               <div className="rounded-xl bg-gradient-to-br from-orange-50 to-red-50 border border-orange-200 p-4 space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl">🦞</span>
+                  <Globe className="w-5 h-5 text-orange-600 shrink-0" />
                   <div>
                     <p className="font-bold text-sm text-orange-800">OpenClaw Integration</p>
                     <p className="text-xs text-orange-600">Personal AI assistant gateway</p>

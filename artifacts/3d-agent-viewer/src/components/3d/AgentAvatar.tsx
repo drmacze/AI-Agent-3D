@@ -20,19 +20,19 @@ function tie(id: number)    { return TIE_COLORS[id   % TIE_COLORS.length]; }
 function shoes(id: number)  { return SHOE_COLORS[id  % SHOE_COLORS.length]; }
 
 // ─── Activity bubble ─────────────────────────────────────────────────────────
-function getActivityInfo(agent: Agent): { emoji: string; label: string; color: string } {
+function getActivityInfo(agent: Agent): { label: string; color: string } {
   const t = (agent.currentTask ?? "").toLowerCase();
-  if (t.includes("coffee") || t.includes("break")) return { emoji: "☕", label: "Coffee Break", color: "#92400e" };
-  if (t.includes("explor") || t.includes("wander")) return { emoji: "🚶", label: "Exploring", color: "#92400e" };
-  if (t.includes("meeting") || t.includes("coordination")) return { emoji: "📋", label: "Meeting", color: "#1d4ed8" };
-  if (t.includes("review") || t.includes("audit"))  return { emoji: "🔍", label: "Reviewing", color: "#7c3aed" };
-  if (t.includes("deploy") || t.includes("ship"))   return { emoji: "🚀", label: "Deploying", color: "#065f46" };
-  if (t.includes("research") || t.includes("analys")) return { emoji: "🧠", label: "Researching", color: "#1e3a8a" };
+  if (t.includes("coffee") || t.includes("break")) return { label: "Coffee Break", color: "#92400e" };
+  if (t.includes("explor") || t.includes("wander")) return { label: "Exploring", color: "#92400e" };
+  if (t.includes("meeting") || t.includes("coordination")) return { label: "Meeting", color: "#1d4ed8" };
+  if (t.includes("review") || t.includes("audit"))  return { label: "Reviewing", color: "#7c3aed" };
+  if (t.includes("deploy") || t.includes("ship"))   return { label: "Deploying", color: "#065f46" };
+  if (t.includes("research") || t.includes("analys")) return { label: "Researching", color: "#1e3a8a" };
   switch (agent.status) {
-    case "working":  return { emoji: "⌨️", label: agent.currentTask?.slice(0, 22) ?? "Working", color: "#1d4ed8" };
-    case "chatting": return { emoji: "💬", label: "Chatting", color: "#7c3aed" };
-    case "moving":   return { emoji: "🚶", label: "Moving", color: "#92400e" };
-    default:         return { emoji: "💤", label: "Idle", color: "#6b7280" };
+    case "working":  return { label: agent.currentTask?.slice(0, 22) ?? "Working", color: "#1d4ed8" };
+    case "chatting": return { label: "Chatting", color: "#7c3aed" };
+    case "moving":   return { label: "Moving", color: "#92400e" };
+    default:         return { label: "Idle", color: "#6b7280" };
   }
 }
 
@@ -435,9 +435,9 @@ export function AgentAvatar({ agent, isSelected, onClick }: Props) {
         {/* Activity bubble — floats above head */}
         <Html position={[0, 0.46, 0]} center zIndexRange={[100, 0]} className="pointer-events-none select-none">
           <div className="flex flex-col items-center gap-0.5" style={{ transform: "translateZ(0)" }}>
-            {/* Activity emoji chip */}
+            {/* Activity chip */}
             <div
-              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold shadow-md whitespace-nowrap"
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold shadow-md whitespace-nowrap"
               style={{
                 background: "rgba(255,255,255,0.92)",
                 border: `1.5px solid ${activity.color}30`,
@@ -445,8 +445,9 @@ export function AgentAvatar({ agent, isSelected, onClick }: Props) {
                 backdropFilter: "blur(4px)",
               }}
             >
-              <span style={{ fontSize: 11 }}>{activity.emoji}</span>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: activity.color, display: "inline-block", flexShrink: 0 }} />
               <span>{agent.name}</span>
+              <span style={{ opacity: 0.5, fontSize: 9, fontWeight: 400 }}>{activity.label}</span>
             </div>
           </div>
         </Html>
