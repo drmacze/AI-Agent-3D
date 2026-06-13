@@ -598,8 +598,13 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
             />
           )}
 
-          {/* Post-processing: bloom + vignette */}
-          {settings.bloomEnabled && <PostProcessingEffects />}
+          {/* Post-processing: bloom + vignette + per-floor color grading + chat DoF */}
+          {settings.bloomEnabled && (
+            <PostProcessingEffects
+              chatMode={selectedAgentId !== null}
+              floorId={currentFloor}
+            />
+          )}
 
           <Suspense fallback={null}>
             <ReflectiveFloor floorId={currentFloor} />

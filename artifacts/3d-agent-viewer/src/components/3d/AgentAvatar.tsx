@@ -186,194 +186,194 @@ export function AgentAvatar({ agent, isSelected, onClick }: Props) {
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]} scale={[1, 0.72, 1]}>
         <circleGeometry args={[0.24, 14]} />
-        <meshLambertMaterial color="#a09888" transparent opacity={0.28} depthWrite={false} />
+        <meshStandardMaterial color="#a09888" transparent opacity={0.28} depthWrite={false} />
       </mesh>
 
       <mesh position={[-0.09, 0.065, 0.1]}>
         <boxGeometry args={[0.12, 0.065, 0.24]} />
-        <meshLambertMaterial color={shoeColor} />
+        <meshStandardMaterial color={shoeColor} roughness={0.55} metalness={0.12} />
       </mesh>
       <mesh position={[0.09, 0.065, 0.1]}>
         <boxGeometry args={[0.12, 0.065, 0.24]} />
-        <meshLambertMaterial color={shoeColor} />
+        <meshStandardMaterial color={shoeColor} roughness={0.55} metalness={0.12} />
       </mesh>
 
       <group ref={leftLegRef} position={[-0.1, 0.1, 0]}>
         <mesh position={[0, 0.26, 0]}>
           <boxGeometry args={[0.13, 0.52, 0.14]} />
-          <meshLambertMaterial color={pantsColor} />
+          <meshStandardMaterial color={pantsColor} roughness={0.90} metalness={0.0} />
         </mesh>
       </group>
       <group ref={rightLegRef} position={[0.1, 0.1, 0]}>
         <mesh position={[0, 0.26, 0]}>
           <boxGeometry args={[0.13, 0.52, 0.14]} />
-          <meshLambertMaterial color={pantsColor} />
+          <meshStandardMaterial color={pantsColor} roughness={0.90} metalness={0.0} />
         </mesh>
       </group>
 
       <mesh position={[0, 0.64, 0]}>
         <boxGeometry args={[0.36, 0.045, 0.21]} />
-        <meshLambertMaterial color="#1a1208" />
+        <meshStandardMaterial color="#1a1208" roughness={0.65} metalness={0.15} />
       </mesh>
       <mesh position={[0, 0.645, 0.107]}>
         <boxGeometry args={[0.06, 0.035, 0.01]} />
-        <meshLambertMaterial color="#c8a840" />
+        <meshStandardMaterial color="#c8a840" roughness={0.18} metalness={0.88} />
       </mesh>
 
       <mesh ref={bodyRef} position={[0, 0.93, 0]}>
         <boxGeometry args={[0.36, 0.52, 0.21]} />
-        <meshLambertMaterial color={shirtColor} />
+        <meshStandardMaterial color={shirtColor} roughness={0.85} metalness={0.0} />
       </mesh>
 
       <mesh position={[0, 1.2, 0.1]}>
         <boxGeometry args={[0.14, 0.1, 0.04]} />
-        <meshLambertMaterial color="#f5f0ea" />
+        <meshStandardMaterial color="#f5f0ea" roughness={0.90} metalness={0.0} />
       </mesh>
       <mesh position={[0, 1.08, 0.107]}>
         <boxGeometry args={[0.04, 0.28, 0.01]} />
-        <meshLambertMaterial color={tieColor} />
+        <meshStandardMaterial color={tieColor} roughness={0.55} metalness={0.05} />
       </mesh>
       <mesh position={[0, 1.2, 0.108]}>
         <boxGeometry args={[0.05, 0.045, 0.015]} />
-        <meshLambertMaterial color={tieColor} />
+        <meshStandardMaterial color={tieColor} roughness={0.55} metalness={0.05} />
       </mesh>
 
       {[1.05, 0.93, 0.81].map((y, i) => (
         <mesh key={i} position={[0, y, 0.107]}>
           <boxGeometry args={[0.018, 0.018, 0.01]} />
-          <meshLambertMaterial color="#e8e4de" />
+          <meshStandardMaterial color="#e8e4de" />
         </mesh>
       ))}
 
       <mesh position={[-0.22, 1.17, 0]}>
         <sphereGeometry args={[0.065, 6, 5]} />
-        <meshLambertMaterial color={shirtColor} />
+        <meshStandardMaterial color={shirtColor} />
       </mesh>
       <mesh position={[0.22, 1.17, 0]}>
         <sphereGeometry args={[0.065, 6, 5]} />
-        <meshLambertMaterial color={shirtColor} />
+        <meshStandardMaterial color={shirtColor} />
       </mesh>
 
       <group ref={leftArmRef} position={[-0.22, 1.17, 0]}>
         <mesh position={[0, -0.21, 0]}>
           <boxGeometry args={[0.11, 0.42, 0.12]} />
-          <meshLambertMaterial color={shirtColor} />
+          <meshStandardMaterial color={shirtColor} />
         </mesh>
         <mesh position={[0, -0.44, 0]}>
           <boxGeometry args={[0.115, 0.055, 0.125]} />
-          <meshLambertMaterial color="#f0ece6" />
+          <meshStandardMaterial color="#f0ece6" />
         </mesh>
         <mesh position={[0, -0.55, 0.01]}>
           <boxGeometry args={[0.095, 0.11, 0.095]} />
-          <meshLambertMaterial color={skinColor} />
+          <meshStandardMaterial color={skinColor} />
         </mesh>
       </group>
 
       <group ref={rightArmRef} position={[0.22, 1.17, 0]}>
         <mesh position={[0, -0.21, 0]}>
           <boxGeometry args={[0.11, 0.42, 0.12]} />
-          <meshLambertMaterial color={shirtColor} />
+          <meshStandardMaterial color={shirtColor} />
         </mesh>
         <mesh position={[0, -0.44, 0]}>
           <boxGeometry args={[0.115, 0.055, 0.125]} />
-          <meshLambertMaterial color="#f0ece6" />
+          <meshStandardMaterial color="#f0ece6" />
         </mesh>
         <mesh position={[0, -0.55, 0.01]}>
           <boxGeometry args={[0.095, 0.11, 0.095]} />
-          <meshLambertMaterial color={skinColor} />
+          <meshStandardMaterial color={skinColor} />
         </mesh>
       </group>
 
       <mesh position={[0, 1.26, 0]}>
         <cylinderGeometry args={[0.063, 0.07, 0.1, 8]} />
-        <meshLambertMaterial color={skinColor} />
+        <meshStandardMaterial color={skinColor} />
       </mesh>
 
       <group ref={headGroup} position={[0, 1.45, 0]}>
         <mesh>
           <boxGeometry args={[0.27, 0.3, 0.25]} />
-          <meshLambertMaterial color={skinColor} />
+          <meshStandardMaterial color={skinColor} />
         </mesh>
 
         <mesh position={[0, 0.17, -0.01]}>
           <boxGeometry args={[0.275, 0.1, 0.26]} />
-          <meshLambertMaterial color={hairColor} />
+          <meshStandardMaterial color={hairColor} />
         </mesh>
         <mesh position={[-0.135, 0.09, 0]}>
           <boxGeometry args={[0.02, 0.22, 0.25]} />
-          <meshLambertMaterial color={hairColor} />
+          <meshStandardMaterial color={hairColor} />
         </mesh>
         <mesh position={[0.135, 0.09, 0]}>
           <boxGeometry args={[0.02, 0.22, 0.25]} />
-          <meshLambertMaterial color={hairColor} />
+          <meshStandardMaterial color={hairColor} />
         </mesh>
         <mesh position={[0, 0.06, -0.13]}>
           <boxGeometry args={[0.26, 0.2, 0.02]} />
-          <meshLambertMaterial color={hairColor} />
+          <meshStandardMaterial color={hairColor} />
         </mesh>
 
         <mesh position={[-0.075, 0.09, 0.128]}>
           <boxGeometry args={[0.07, 0.018, 0.01]} />
-          <meshLambertMaterial color={hairColor} />
+          <meshStandardMaterial color={hairColor} />
         </mesh>
         <mesh position={[0.075, 0.09, 0.128]}>
           <boxGeometry args={[0.07, 0.018, 0.01]} />
-          <meshLambertMaterial color={hairColor} />
+          <meshStandardMaterial color={hairColor} />
         </mesh>
 
         <mesh position={[-0.075, 0.04, 0.127]}>
           <boxGeometry args={[0.065, 0.04, 0.01]} />
-          <meshLambertMaterial color="#f0ede8" />
+          <meshStandardMaterial color="#f0ede8" />
         </mesh>
         <mesh position={[0.075, 0.04, 0.127]}>
           <boxGeometry args={[0.065, 0.04, 0.01]} />
-          <meshLambertMaterial color="#f0ede8" />
+          <meshStandardMaterial color="#f0ede8" />
         </mesh>
 
         <mesh position={[-0.075, 0.04, 0.131]}>
           <boxGeometry args={[0.036, 0.036, 0.01]} />
-          <meshLambertMaterial color="#1e3a5a" />
+          <meshStandardMaterial color="#1e3a5a" />
         </mesh>
         <mesh position={[0.075, 0.04, 0.131]}>
           <boxGeometry args={[0.036, 0.036, 0.01]} />
-          <meshLambertMaterial color="#1e3a5a" />
+          <meshStandardMaterial color="#1e3a5a" />
         </mesh>
 
         <mesh position={[-0.075, 0.04, 0.134]}>
           <boxGeometry args={[0.018, 0.018, 0.005]} />
-          <meshLambertMaterial color="#0a0a0a" />
+          <meshStandardMaterial color="#0a0a0a" />
         </mesh>
         <mesh position={[0.075, 0.04, 0.134]}>
           <boxGeometry args={[0.018, 0.018, 0.005]} />
-          <meshLambertMaterial color="#0a0a0a" />
+          <meshStandardMaterial color="#0a0a0a" />
         </mesh>
 
         <mesh ref={leftEyeLidRef}  position={[-0.075, 0.04, 0.136]}>
           <boxGeometry args={[0.067, 0.042, 0.004]} />
-          <meshLambertMaterial color={skinColor} />
+          <meshStandardMaterial color={skinColor} />
         </mesh>
         <mesh ref={rightEyeLidRef} position={[0.075, 0.04, 0.136]}>
           <boxGeometry args={[0.067, 0.042, 0.004]} />
-          <meshLambertMaterial color={skinColor} />
+          <meshStandardMaterial color={skinColor} />
         </mesh>
 
         <mesh position={[-0.137, 0.02, 0]}>
           <boxGeometry args={[0.02, 0.055, 0.05]} />
-          <meshLambertMaterial color={skinColor} />
+          <meshStandardMaterial color={skinColor} />
         </mesh>
         <mesh position={[0.137, 0.02, 0]}>
           <boxGeometry args={[0.02, 0.055, 0.05]} />
-          <meshLambertMaterial color={skinColor} />
+          <meshStandardMaterial color={skinColor} />
         </mesh>
 
         <mesh position={[0, -0.02, 0.132]}>
           <boxGeometry args={[0.025, 0.028, 0.022]} />
-          <meshLambertMaterial color={skinColor} />
+          <meshStandardMaterial color={skinColor} />
         </mesh>
 
         <mesh position={[0, -0.085, 0.129]}>
           <boxGeometry args={[0.065, 0.016, 0.008]} />
-          <meshLambertMaterial color={agent.status === "chatting" ? "#a03020" : "#8a5048"} />
+          <meshStandardMaterial color={agent.status === "chatting" ? "#a03020" : "#8a5048"} />
         </mesh>
 
         <Html position={[0, 0.46, 0]} center zIndexRange={[100, 0]} className="pointer-events-none select-none">
@@ -398,13 +398,13 @@ export function AgentAvatar({ agent, isSelected, onClick }: Props) {
       {isSelected && (
         <mesh ref={selRingRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.016, 0]}>
           <ringGeometry args={[0.3, 0.38, 24]} />
-          <meshLambertMaterial color="#2563eb" transparent opacity={0.75} />
+          <meshStandardMaterial color="#2563eb" transparent opacity={0.75} />
         </mesh>
       )}
       {isSelected && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.013, 0]}>
           <ringGeometry args={[0.42, 0.46, 24]} />
-          <meshLambertMaterial color="#3b82f6" transparent opacity={0.35} />
+          <meshStandardMaterial color="#3b82f6" transparent opacity={0.35} />
         </mesh>
       )}
     </group>

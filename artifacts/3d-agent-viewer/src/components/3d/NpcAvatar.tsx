@@ -586,8 +586,26 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
             >
               <span style={{ width: 5, height: 5, borderRadius: "50%", background: accentColor, display: "inline-block", flexShrink: 0 }} />
               <span>{agent.name}</span>
-              <span style={{ opacity: 0.55, fontSize: 9, fontWeight: 400 }}>{activityLabel}</span>
+              <span style={{ opacity: 0.55, fontSize: 9, fontWeight: 400 }}>{isSelected ? "Chatting" : activityLabel}</span>
             </div>
+            {isSelected && (
+              <div
+                className="npc-thinking"
+                style={{
+                  background: `rgba(10,10,25,0.82)`,
+                  border: `1px solid ${accentColor}60`,
+                  borderRadius: 8,
+                  padding: "2px 8px",
+                  fontSize: 13,
+                  color: accentColor,
+                  backdropFilter: "blur(8px)",
+                  marginTop: 2,
+                  letterSpacing: 2,
+                }}
+              >
+                <span>·</span><span>·</span><span>·</span>
+              </div>
+            )}
           </div>
         </Html>
       </group>
