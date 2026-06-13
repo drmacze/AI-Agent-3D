@@ -28,6 +28,18 @@ const MEETING_SPOTS: Array<[number, number]> = [
   [0.7, 0.5],
 ];
 
+/** Spots for solo wandering / break activities */
+const WANDER_SPOTS: Array<{ pos: [number, number]; label: string }> = [
+  { pos: [-10.5, -7.5], label: "coffee machine" },
+  { pos: [-10.5, -7.5], label: "coffee machine" },
+  { pos: [-4, -7.5],    label: "whiteboard" },
+  { pos: [9.5, -7.5],   label: "bookshelf" },
+  { pos: [-11, 7],      label: "plant corner" },
+  { pos: [11, -6],      label: "window" },
+  { pos: [7, 1],        label: "meeting table" },
+  { pos: [0, 0],        label: "centre floor" },
+];
+
 const AGENT_NAMES: Record<number, string> = {
   1: "ARIA",
   2: "NEXUS",
@@ -40,22 +52,30 @@ const AGENT_NAMES: Record<number, string> = {
 // ─── Task Templates ───────────────────────────────────────────────────────────
 
 const TASK_POOL = [
-  { title: "Analyze anomaly dataset",      description: "Run pattern analysis on the latest sensor anomalies",           priority: "high"   },
-  { title: "Deploy recommendation engine", description: "Ship the new microservice to the staging cluster",              priority: "high"   },
-  { title: "Refactor auth pipeline",       description: "Replace deprecated OAuth library with current standard",       priority: "medium" },
-  { title: "Sprint planning session",      description: "Define scope and tasks for upcoming sprint cycle",             priority: "medium" },
-  { title: "Optimise query performance",   description: "Profile slow dashboard queries and add appropriate indexes",    priority: "medium" },
-  { title: "Write integration tests",      description: "Cover the new event-bus handler with end-to-end tests",        priority: "low"    },
-  { title: "Review PR #52",               description: "Code review for the data-ingestion refactor branch",           priority: "medium" },
-  { title: "Document REST endpoints",     description: "Auto-generate and publish OpenAPI spec for v2 endpoints",      priority: "low"    },
-  { title: "Security audit — API layer",  description: "Scan endpoints for injection risks and rate-limit gaps",       priority: "high"   },
-  { title: "Build knowledge graph",       description: "Extract entity relationships from research corpus",             priority: "medium" },
-  { title: "Compile research report",     description: "Summarise competitor landscape findings into a slide deck",    priority: "low"    },
-  { title: "Benchmark inference latency", description: "Compare p50/p99 latency across three model serving configs",   priority: "high"   },
-  { title: "Update project roadmap",      description: "Align roadmap milestones with updated delivery estimates",     priority: "medium" },
-  { title: "Monitor deployment health",   description: "Watch rollout metrics and revert automatically on regression", priority: "high"   },
-  { title: "Consolidate log pipelines",   description: "Merge three separate Fluentd configs into a single topology",  priority: "low"    },
-  { title: "Data pipeline migration",     description: "Port Spark jobs to the new dbt + DuckDB workflow",             priority: "medium" },
+  { title: "Analyze anomaly dataset",      description: "Run pattern analysis on the latest sensor anomalies",               priority: "high"   },
+  { title: "Deploy recommendation engine", description: "Ship the new microservice to the staging cluster",                  priority: "high"   },
+  { title: "Refactor auth pipeline",       description: "Replace deprecated OAuth library with current standard",            priority: "medium" },
+  { title: "Sprint planning session",      description: "Define scope and tasks for upcoming sprint cycle",                  priority: "medium" },
+  { title: "Optimise query performance",   description: "Profile slow dashboard queries and add appropriate indexes",        priority: "medium" },
+  { title: "Write integration tests",      description: "Cover the new event-bus handler with end-to-end tests",            priority: "low"    },
+  { title: "Review PR #52",               description: "Code review for the data-ingestion refactor branch",                priority: "medium" },
+  { title: "Document REST endpoints",     description: "Auto-generate and publish OpenAPI spec for v2 endpoints",           priority: "low"    },
+  { title: "Security audit — API layer",  description: "Scan endpoints for injection risks and rate-limit gaps",            priority: "high"   },
+  { title: "Build knowledge graph",       description: "Extract entity relationships from research corpus",                  priority: "medium" },
+  { title: "Compile research report",     description: "Summarise competitor landscape findings into a slide deck",         priority: "low"    },
+  { title: "Benchmark inference latency", description: "Compare p50/p99 latency across three model serving configs",        priority: "high"   },
+  { title: "Update project roadmap",      description: "Align roadmap milestones with updated delivery estimates",          priority: "medium" },
+  { title: "Monitor deployment health",   description: "Watch rollout metrics and revert automatically on regression",      priority: "high"   },
+  { title: "Consolidate log pipelines",   description: "Merge three separate Fluentd configs into a single topology",       priority: "low"    },
+  { title: "Data pipeline migration",     description: "Port Spark jobs to the new dbt + DuckDB workflow",                  priority: "medium" },
+  { title: "Train NLP classifier",        description: "Fine-tune the entity-extraction model on latest labelled corpus",   priority: "high"   },
+  { title: "Design system update",        description: "Sync component tokens with new brand guidelines",                   priority: "low"    },
+  { title: "Cost optimisation audit",     description: "Identify and right-size over-provisioned cloud resources",          priority: "medium" },
+  { title: "Real-time dashboard v2",      description: "Add streaming WebSocket feed to the ops monitoring dashboard",      priority: "high"   },
+  { title: "API rate-limit strategy",     description: "Design token-bucket policy for public-facing endpoints",            priority: "medium" },
+  { title: "Onboarding flow redesign",    description: "Streamline new-user steps to reduce drop-off below 10%",           priority: "medium" },
+  { title: "Cache invalidation review",   description: "Audit stale-read scenarios and tighten TTL policies",               priority: "low"    },
+  { title: "Chaos engineering exercise",  description: "Simulate node failures and verify auto-recovery procedures",        priority: "high"   },
 ];
 
 // ─── Chat Messages ────────────────────────────────────────────────────────────
@@ -221,6 +241,28 @@ class SimulationEngine {
   }
 
   private async handleIdle(agent: typeof agentsTable.$inferSelect) {
+    // 20% chance: take a coffee break / stretch / wander regardless of tasks
+    if (chancePct(20)) {
+      const spot = pick(WANDER_SPOTS);
+      const isCoffee = spot.label === "coffee machine";
+      const label = isCoffee
+        ? pick(["Getting coffee ☕", "Coffee break ☕", "Refilling cup ☕"])
+        : spot.label === "whiteboard"
+        ? pick(["Checking whiteboard 📋", "Reviewing notes 📋", "Sketching ideas 📋"])
+        : spot.label === "window"
+        ? pick(["Looking outside 🪟", "Taking a break 🪟", "Clearing head 🪟"])
+        : `Exploring office`;
+      await db.update(agentsTable).set({
+        status: "moving",
+        currentTask: label,
+        positionX: spot.pos[0],
+        positionZ: spot.pos[1],
+      }).where(eq(agentsTable.id, agent.id));
+      await this.logEvent(agent.id, AGENT_NAMES[agent.id] ?? agent.name, "movement",
+        `${AGENT_NAMES[agent.id] ?? agent.name} headed to the ${spot.label}`);
+      return;
+    }
+
     // 65% chance to pick up a pending task
     if (!chancePct(65)) return;
 
@@ -232,7 +274,6 @@ class SimulationEngine {
       .limit(1);
 
     if (pendingTask) {
-      // Assign the task
       await db.update(tasksTable).set({
         status: "in_progress",
         assignedAgentId: agent.id,
@@ -245,14 +286,17 @@ class SimulationEngine {
         activeTaskId: pendingTask.id,
       }).where(eq(agentsTable.id, agent.id));
 
-      await this.logEvent(agent.id, AGENT_NAMES[agent.id] ?? agent.name, "started_task",
+      await this.logEvent(agent.id, AGENT_NAMES[agent.id] ?? agent.name, "task_started",
         EVENT_DESCRIPTIONS.started_task(pendingTask.title));
     } else {
-      // No pending tasks — maybe go chat or just wander
-      if (chancePct(30)) {
+      // No pending tasks — wander to a random spot
+      if (chancePct(40)) {
+        const spot = pick(WANDER_SPOTS);
         await db.update(agentsTable).set({
           status: "moving",
-          currentTask: "Exploring office",
+          currentTask: `Exploring office`,
+          positionX: spot.pos[0],
+          positionZ: spot.pos[1],
         }).where(eq(agentsTable.id, agent.id));
       }
     }
@@ -378,8 +422,23 @@ class SimulationEngine {
   }
 
   private async handleMoving(agent: typeof agentsTable.$inferSelect) {
-    // Moving agents arrive after a tick
-    if (chancePct(70)) {
+    // 65% chance the agent "arrives" at current position
+    if (!chancePct(65)) return;
+
+    const task = agent.currentTask ?? "";
+    const isWander = task.includes("☕") || task.includes("📋") || task.includes("🪟") || task.includes("Exploring");
+
+    if (isWander) {
+      // Agent arrived at wander destination — stay and rest (idle at wander spot)
+      await db.update(agentsTable).set({
+        status: "idle",
+        currentTask: task.includes("☕") ? task : null,
+      }).where(eq(agentsTable.id, agent.id));
+      const dest = task.includes("☕") ? "coffee machine" : task.includes("📋") ? "whiteboard" : "their destination";
+      await this.logEvent(agent.id, AGENT_NAMES[agent.id] ?? agent.name, "movement",
+        `${AGENT_NAMES[agent.id] ?? agent.name} arrived at ${dest}`);
+    } else {
+      // Returning to desk
       const home = HOME_POS[agent.id];
       await db.update(agentsTable).set({
         status: "idle",
@@ -387,8 +446,7 @@ class SimulationEngine {
         positionX: home?.[0] ?? agent.positionX,
         positionZ: home?.[1] ?? agent.positionZ,
       }).where(eq(agentsTable.id, agent.id));
-
-      await this.logEvent(agent.id, AGENT_NAMES[agent.id] ?? agent.name, "moved",
+      await this.logEvent(agent.id, AGENT_NAMES[agent.id] ?? agent.name, "movement",
         EVENT_DESCRIPTIONS.moved("desk"));
     }
   }

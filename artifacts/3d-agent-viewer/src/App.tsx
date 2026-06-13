@@ -7,6 +7,7 @@ import Home from "@/pages/Home";
 import Agents from "@/pages/Agents";
 import Tasks from "@/pages/Tasks";
 import Layout from "@/components/layout/Layout";
+import { GameTimeProvider } from "@/context/GameTimeContext";
 
 const queryClient = new QueryClient();
 
@@ -35,14 +36,16 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <GameTimeProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </GameTimeProvider>
   );
 }
 
