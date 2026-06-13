@@ -22,7 +22,7 @@ router.post("/:agentId", async (req, res) => {
     playerName = "You", openclawGatewayUrl, openclawAgentId,
   } = req.body as {
     message: string; apiKey?: string;
-    provider?: "openai" | "anthropic" | "openclaw";
+    provider?: "openai" | "anthropic" | "groq" | "kimi" | "openclaw";
     playerName?: string; openclawGatewayUrl?: string; openclawAgentId?: string;
   };
 
@@ -42,6 +42,10 @@ router.post("/:agentId", async (req, res) => {
       fullResponse = await streamOpenClaw(openclawGatewayUrl ?? "http://localhost:18789", openclawAgentId ?? "default", systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
     } else if (provider === "anthropic") {
       fullResponse = await streamAnthropic(apiKey!, systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
+    } else if (provider === "groq") {
+      fullResponse = await streamGroq(apiKey!, systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
+    } else if (provider === "kimi") {
+      fullResponse = await streamKimi(apiKey!, systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
     } else {
       fullResponse = await streamOpenAI(apiKey!, systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
     }
@@ -62,7 +66,7 @@ router.post("/npc/:npcId", async (req, res) => {
     agentData, openclawGatewayUrl, openclawAgentId,
   } = req.body as {
     message: string; apiKey?: string;
-    provider?: "openai" | "anthropic" | "openclaw";
+    provider?: "openai" | "anthropic" | "groq" | "kimi" | "openclaw";
     playerName?: string;
     agentData?: { name: string; role: string; personality: string; department: string; currentTask: string; specialty?: string };
     openclawGatewayUrl?: string; openclawAgentId?: string;
@@ -88,6 +92,10 @@ Keep responses concise (2-4 sentences). You're speaking to ${playerName}, a coll
       fullResponse = await streamOpenClaw(openclawGatewayUrl ?? "http://localhost:18789", openclawAgentId ?? "default", systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
     } else if (provider === "anthropic") {
       fullResponse = await streamAnthropic(apiKey!, systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
+    } else if (provider === "groq") {
+      fullResponse = await streamGroq(apiKey!, systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
+    } else if (provider === "kimi") {
+      fullResponse = await streamKimi(apiKey!, systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
     } else {
       fullResponse = await streamOpenAI(apiKey!, systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
     }
@@ -163,6 +171,44 @@ async function readSSEStream(response: Response, onChunk: (c: string) => void, p
     }
   }
   return full;
+}
+
+// ─── Groq (OpenAI-compatible) ─────────────────────────────────────────────────
+async function streamGroq(apiKey: string, systemPrompt: string, userMessage: string, playerName: string, onChunk: (c: string) => void): Promise<string> {
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      max_tokens: 350,
+      stream: true,
+      messages: [{ role: "system", content: systemPrompt }, { role: "user", content: `${playerName}: ${userMessage}` }],
+    }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
+    throw new Error(`Groq: ${(err as { error?: { message: string } }).error?.message ?? response.statusText}`);
+  }
+  return readSSEStream(response, onChunk, ["choices.0.delta.content"]);
+}
+
+// ─── Kimi 2.6 / Moonshot AI (OpenAI-compatible) ───────────────────────────────
+async function streamKimi(apiKey: string, systemPrompt: string, userMessage: string, playerName: string, onChunk: (c: string) => void): Promise<string> {
+  const response = await fetch("https://api.moonshot.cn/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "moonshot-v1-8k",
+      max_tokens: 350,
+      stream: true,
+      messages: [{ role: "system", content: systemPrompt }, { role: "user", content: `${playerName}: ${userMessage}` }],
+    }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
+    throw new Error(`Kimi: ${(err as { error?: { message: string } }).error?.message ?? response.statusText}`);
+  }
+  return readSSEStream(response, onChunk, ["choices.0.delta.content"]);
 }
 
 // ─── OpenAI ──────────────────────────────────────────────────────────────────

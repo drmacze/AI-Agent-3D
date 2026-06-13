@@ -86,45 +86,62 @@ export function SettingsOverlay() {
             <>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Provider</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["openai", "anthropic", "openclaw"] as const).map(p => (
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { id: "openai",    label: "🤖 OpenAI",    sub: "GPT-4o mini" },
+                    { id: "anthropic", label: "🔮 Anthropic",  sub: "Claude 3 Haiku" },
+                    { id: "groq",      label: "⚡ Groq",       sub: "Llama 3.3 70B" },
+                    { id: "kimi",      label: "🌙 Kimi 2.6",   sub: "Moonshot AI" },
+                    { id: "openclaw",  label: "🦞 OpenClaw",   sub: "Local gateway" },
+                  ] as const).map(({ id, label, sub }) => (
                     <button
-                      key={p}
-                      onClick={() => updateSettings({ apiProvider: p })}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-bold border-2 transition-all ${
-                        settings.apiProvider === p
-                          ? "border-blue-500 bg-blue-50 text-blue-700"
-                          : "border-gray-200 text-gray-500 hover:border-gray-300"
+                      key={id}
+                      onClick={() => updateSettings({ apiProvider: id })}
+                      className={`py-2.5 px-3 rounded-xl text-left border-2 transition-all ${
+                        settings.apiProvider === id
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300"
                       }`}
                     >
-                      {p === "openai" ? "OpenAI" : p === "anthropic" ? "Anthropic" : "🦞 OpenClaw"}
+                      <div className={`text-xs font-bold ${settings.apiProvider === id ? "text-blue-700" : "text-gray-600"}`}>{label}</div>
+                      <div className="text-[10px] text-gray-400 mt-0.5">{sub}</div>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {settings.apiProvider !== "openclaw" && (
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                    {settings.apiProvider === "openai" ? "OpenAI API Key" : "Anthropic API Key"}
-                  </label>
-                  <div className="relative">
-                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="password"
-                      value={settings.apiKey}
-                      onChange={e => updateSettings({ apiKey: e.target.value })}
-                      placeholder={settings.apiProvider === "openai" ? "sk-..." : "sk-ant-..."}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+              {settings.apiProvider !== "openclaw" && (() => {
+                const cfg: Record<string, { placeholder: string; hint: string; link: string }> = {
+                  openai:    { placeholder: "sk-...",      hint: "Get yours at",   link: "platform.openai.com" },
+                  anthropic: { placeholder: "sk-ant-...",  hint: "Get yours at",   link: "console.anthropic.com" },
+                  groq:      { placeholder: "gsk_...",     hint: "Free tier at",   link: "console.groq.com" },
+                  kimi:      { placeholder: "sk-...",      hint: "Get yours at",   link: "platform.moonshot.cn" },
+                };
+                const c = cfg[settings.apiProvider] ?? cfg.openai;
+                return (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                      API Key — {settings.apiProvider.charAt(0).toUpperCase() + settings.apiProvider.slice(1)}
+                    </label>
+                    <div className="relative">
+                      <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="password"
+                        value={settings.apiKey}
+                        onChange={e => updateSettings({ apiKey: e.target.value })}
+                        placeholder={c.placeholder}
+                        className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {c.hint}: <a href={`https://${c.link}`} target="_blank" rel="noreferrer" className="underline hover:text-blue-500">{c.link}</a>
+                    </p>
+                    {settings.apiKey && (
+                      <p className="text-xs text-green-600 mt-1">✓ Key saved locally — never sent to our servers</p>
+                    )}
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {settings.apiProvider === "openai"
-                      ? "Get yours at platform.openai.com"
-                      : "Get yours at console.anthropic.com"}
-                  </p>
-                </div>
-              )}
+                );
+              })()}
 
               {settings.apiProvider === "openclaw" && (
                 <div className="rounded-xl bg-orange-50 border border-orange-200 p-3 text-xs text-orange-700 space-y-1.5">

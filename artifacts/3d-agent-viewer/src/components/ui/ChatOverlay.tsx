@@ -34,6 +34,8 @@ export function ChatOverlay({ agent, onClose }: Props) {
   const agentRole  = agent.role;
   const agentColor = agent.color;
   const isOpenClaw = settings.apiProvider === "openclaw";
+  const isGroq = settings.apiProvider === "groq";
+  const isKimi = settings.apiProvider === "kimi";
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -154,9 +156,13 @@ export function ChatOverlay({ agent, onClose }: Props) {
 
   const providerBadge = isOpenClaw
     ? <span className="flex items-center gap-1 text-xs text-orange-200 ml-1"><span>🦞</span><span>OpenClaw</span></span>
-    : hasApiKey
-      ? <span className="flex items-center gap-1 text-xs text-white/70 ml-1"><Wifi className="w-3 h-3" /><span>AI Live</span></span>
-      : <span className="flex items-center gap-1 text-xs text-amber-200 ml-1"><WifiOff className="w-3 h-3" /><span>No API Key</span></span>;
+    : isGroq
+      ? <span className="flex items-center gap-1 text-xs text-purple-200 ml-1"><Zap className="w-3 h-3" /><span>Groq</span></span>
+      : isKimi
+        ? <span className="flex items-center gap-1 text-xs text-blue-200 ml-1"><span>🌙</span><span>Kimi 2.6</span></span>
+        : hasApiKey
+          ? <span className="flex items-center gap-1 text-xs text-white/70 ml-1"><Wifi className="w-3 h-3" /><span>AI Live</span></span>
+          : <span className="flex items-center gap-1 text-xs text-amber-200 ml-1"><WifiOff className="w-3 h-3" /><span>No API Key</span></span>;
 
   return (
     <div

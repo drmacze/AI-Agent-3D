@@ -1,8 +1,10 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 
+export type ApiProvider = "openai" | "anthropic" | "groq" | "kimi" | "openclaw";
+
 export interface Settings {
   apiKey: string;
-  apiProvider: "openai" | "anthropic" | "openclaw";
+  apiProvider: ApiProvider;
   playerName: string;
   playerColor: string;
   playerSkinTone: string;
@@ -69,6 +71,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       hasApiKey: settings.apiProvider === "openclaw"
         ? !!settings.openclawGatewayUrl.trim()
         : !!settings.apiKey.trim(),
+
     }}>
       {children}
     </SettingsContext.Provider>
