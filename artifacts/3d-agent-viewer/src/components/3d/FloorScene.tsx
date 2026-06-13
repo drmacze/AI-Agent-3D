@@ -87,8 +87,8 @@ function DynamicLights({ floorId }: { floorId: FloorId }) {
       <pointLight color={theme.accent} intensity={0.3} distance={8} position={[9.5, 2, -7.5]} />
       <directionalLight color="#d8eeff" intensity={0.25} position={[13, 3, 0]} />
       {/* Ceiling LED strips */}
-      <pointLight color="#fffbf0" intensity={0.8} distance={12} position={[-4, 3.8, 0]} />
-      <pointLight color="#fffbf0" intensity={0.8} distance={12} position={[ 4, 3.8, 0]} />
+      <pointLight color="#fffbf0" intensity={0.38} distance={14} position={[-4, 3.8, 0]} />
+      <pointLight color="#fffbf0" intensity={0.38} distance={14} position={[ 4, 3.8, 0]} />
     </>
   );
 }
@@ -161,7 +161,7 @@ function ReflectiveFloor({ floorId }: { floorId: FloorId }) {
       <planeGeometry args={[28, 20]} />
       <MeshReflectorMaterial
         blur={[280, 80]}
-        resolution={512}
+        resolution={256}
         mixBlur={0.9}
         mixStrength={30}
         roughness={0.8}
@@ -506,9 +506,14 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
       <WebGLErrorBoundary>
         <Canvas
           camera={{ fov: 70 }}
-          dpr={settings.pixelRatio}
+          dpr={[1, Math.min(settings.pixelRatio, 1.5)]}
           performance={{ min: 0.5 }}
-          gl={{ antialias: settings.antialias, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.15 }}
+          gl={{
+            antialias: settings.antialias,
+            toneMapping: THREE.ACESFilmicToneMapping,
+            toneMappingExposure: 0.88,
+            powerPreference: 'high-performance',
+          }}
           shadows={settings.shadowsEnabled}
         >
           <SceneBackground />
@@ -530,7 +535,7 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
           {settings.bloomEnabled && <PostProcessingEffects />}
 
           <Suspense fallback={null}>
-            <Stars radius={80} depth={40} count={800} factor={4} fade speed={1} />
+            <Stars radius={80} depth={40} count={300} factor={4} fade speed={0.6} />
             <ReflectiveFloor floorId={currentFloor} />
             <FloorProps floorId={currentFloor} />
 
@@ -590,7 +595,6 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
         <TouchControls
           joystickMove={joystickMove}
           joystickLook={joystickLook}
-          jumpTrigger={jumpTrigger}
         />
       )}
 

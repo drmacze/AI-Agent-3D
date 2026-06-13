@@ -4,8 +4,7 @@ import * as THREE from 'three'
 import { useGameStore } from '@/store/gameStore'
 import { audioManager } from '@/lib/audioManager'
 
-const WALK_SPEED = 5
-const RUN_SPEED = 10
+const WALK_SPEED = 5.5
 const JUMP_VEL = 7
 const GRAVITY = -22
 const PLAYER_HEIGHT = 1.72
@@ -96,14 +95,15 @@ export function FirstPersonController({ joystickMove, joystickLook, jumpTrigger,
   useFrame((_, dt) => {
     const d = Math.min(dt, 0.05)
 
-    // Touch look
+    // Touch look — delta consumed each frame (swipe-based, like a trackpad)
     if (joystickLook.current.x !== 0 || joystickLook.current.y !== 0) {
-      yaw.current -= joystickLook.current.x * 0.045
-      pitch.current = Math.max(-1.05, Math.min(0.75, pitch.current - joystickLook.current.y * 0.035))
+      yaw.current -= joystickLook.current.x
+      pitch.current = Math.max(-0.85, Math.min(0.65, pitch.current - joystickLook.current.y))
+      joystickLook.current.x = 0
+      joystickLook.current.y = 0
     }
 
-    const sprint = keys.current.has('ShiftLeft') || keys.current.has('ShiftRight')
-    const speed = sprint ? RUN_SPEED : WALK_SPEED
+    const speed = WALK_SPEED
     const fwd = new THREE.Vector3(-Math.sin(yaw.current), 0, -Math.cos(yaw.current))
     const rgt = new THREE.Vector3(Math.cos(yaw.current), 0, -Math.sin(yaw.current))
     const move = new THREE.Vector3()
@@ -153,11 +153,10 @@ export function FirstPersonController({ joystickMove, joystickLook, jumpTrigger,
     // Footstep sounds when moving on ground
     const isMoving = move.lengthSq() > 0
     if (isMoving && grounded.current) {
-      const interval = sprint ? 0.27 : 0.42
       footstepTimer.current += d
-      if (footstepTimer.current >= interval) {
+      if (footstepTimer.current >= 0.42) {
         footstepTimer.current = 0
-        audioManager.playFootstep(sprint)
+        audioManager.playFootstep(false)
       }
     } else {
       footstepTimer.current = 0
