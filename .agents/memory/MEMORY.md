@@ -6,3 +6,4 @@
 - [Kimi AI asset integration](kimi-assets.md) — PBR upgrade: meshPhysicalMaterial + smoothNoise GLSL in OfficeFloor; NpcAvatar uses same; Kimi ZIP at /tmp/kimi_assets but don't re-extract.
 - [Built-in AI provider](builtin-ai.md) — zero-apikey provider "builtin" is default; streamBuiltin() in chat.ts generates context-aware NPC responses from system-prompt; no external calls needed.
 - [NPC sitting + desk fix](npc-sitting-desk.md) — sitting pose: groupRef.y=s*0.30, legRef.x=s*-1.35; all agents face -Z (Math.PI); monitor always pos[2]-0.18; chair back always chairPos[2]+0.21; NPC work timer 22-50s.
+- [Autonomous AI agent engine](autonomous-agent-engine.md) — agentEngine.ts drives real job execution for all 5 floors; Floor 1 DB-backed + NPC virtual agents; ML pipeline chain; seeding required after schema change.

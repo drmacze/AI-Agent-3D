@@ -149,11 +149,6 @@ export function LobbyScreen() {
                 ? <><LogIn size={15} /> Sign In</>
                 : <><UserPlus size={15} /> Create Account</>}
             </button>
-            {tab === 'login' && (
-              <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11, textAlign: 'center', margin: '2px 0 0' }}>
-                Username <strong style={{ color: 'rgba(251,191,36,0.6)' }}>Drmacze</strong> for developer access
-              </p>
-            )}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

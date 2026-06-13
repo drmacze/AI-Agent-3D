@@ -5,23 +5,41 @@ import { eq, desc, count, and } from "drizzle-orm";
 
 const router = Router();
 
+function formatAgent(a: typeof agentsTable.$inferSelect) {
+  return {
+    id: a.id,
+    name: a.name,
+    role: a.role,
+    status: a.status,
+    currentTask: a.currentTask,
+    positionX: a.positionX,
+    positionZ: a.positionZ,
+    color: a.color,
+    interactingWithId: a.interactingWithId,
+    completedTasks: a.completedTasks,
+    activeTaskId: a.activeTaskId,
+    // ── Real Agent Identity ──────────────────────────────────────────────────
+    floor: a.floor,
+    department: a.department,
+    specialty: a.specialty,
+    skills: (() => { try { return JSON.parse(a.skills ?? "[]"); } catch { return []; } })(),
+    expertiseLevel: a.expertiseLevel,
+    modelVersion: a.modelVersion,
+    currentJobType: a.currentJobType,
+    currentJobPhase: a.currentJobPhase,
+    currentJobPhaseIndex: a.currentJobPhaseIndex,
+    totalJobPhases: a.totalJobPhases,
+    jobsCompleted: a.jobsCompleted,
+    lastCollaboratedWith: a.lastCollaboratedWith,
+    lastCollaborationAt: a.lastCollaborationAt,
+  };
+}
+
 // GET /agents
 router.get("/", async (req, res) => {
   try {
     const agents = await db.select().from(agentsTable).orderBy(agentsTable.id);
-    res.json(agents.map(a => ({
-      id: a.id,
-      name: a.name,
-      role: a.role,
-      status: a.status,
-      currentTask: a.currentTask,
-      positionX: a.positionX,
-      positionZ: a.positionZ,
-      color: a.color,
-      interactingWithId: a.interactingWithId,
-      completedTasks: a.completedTasks,
-      activeTaskId: a.activeTaskId,
-    })));
+    res.json(agents.map(formatAgent));
   } catch (err) {
     res.status(500).json({ error: "Failed to list agents" });
   }
@@ -33,19 +51,7 @@ router.get("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const [agent] = await db.select().from(agentsTable).where(eq(agentsTable.id, id));
     if (!agent) { res.status(404).json({ error: "Not found" }); return; }
-    res.json({
-      id: agent.id,
-      name: agent.name,
-      role: agent.role,
-      status: agent.status,
-      currentTask: agent.currentTask,
-      positionX: agent.positionX,
-      positionZ: agent.positionZ,
-      color: agent.color,
-      interactingWithId: agent.interactingWithId,
-      completedTasks: agent.completedTasks,
-      activeTaskId: agent.activeTaskId,
-    });
+    res.json(formatAgent(agent));
   } catch (err) {
     res.status(500).json({ error: "Failed to get agent" });
   }
