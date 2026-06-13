@@ -160,16 +160,16 @@ function ReflectiveFloor({ floorId }: { floorId: FloorId }) {
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
       <planeGeometry args={[28, 20]} />
       <MeshReflectorMaterial
-        blur={[280, 80]}
+        blur={[200, 60]}
         resolution={256}
-        mixBlur={0.9}
-        mixStrength={30}
-        roughness={0.8}
-        depthScale={1.3}
-        minDepthThreshold={0.35}
-        maxDepthThreshold={1.5}
-        color={floorId === 1 ? "#c8a870" : floorId === 2 ? "#9b6fd0" : floorId === 3 ? "#2d6e5a" : floorId === 4 ? "#8a6020" : "#4a1a1a"}
-        metalness={0.25}
+        mixBlur={1}
+        mixStrength={6}
+        roughness={0.96}
+        depthScale={0.8}
+        minDepthThreshold={0.4}
+        maxDepthThreshold={1.4}
+        color="#ccc8c0"
+        metalness={0.05}
         mirror={0}
       />
     </mesh>
@@ -288,17 +288,11 @@ function FloorProps({ floorId }: { floorId: FloorId }) {
         </group>
       ))}
 
-      {/* Floor accent */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-        <planeGeometry args={[28, 20]} />
-        <meshLambertMaterial color={theme.accent} transparent opacity={0.03} depthWrite={false} />
-      </mesh>
-
-      {/* Ceiling LED strips */}
+      {/* Ceiling LED strips — neutral warm white, same on all floors */}
       {[[-5, 3.96, -3],[0, 3.96, -3],[5, 3.96, -3],[-5, 3.96, 3],[0, 3.96, 3],[5, 3.96, 3]].map(([x, y, z], i) => (
         <mesh key={i} position={[x, y, z] as [number,number,number]}>
           <boxGeometry args={[0.14, 0.04, 2.8]} />
-          <meshLambertMaterial color="#fffff8" emissive={theme.accent} emissiveIntensity={0.1} />
+          <meshLambertMaterial color="#fffff8" emissive="#fffde8" emissiveIntensity={0.12} />
         </mesh>
       ))}
 
