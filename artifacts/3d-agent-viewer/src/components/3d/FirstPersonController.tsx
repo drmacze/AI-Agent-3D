@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { useGameStore } from '@/store/gameStore'
 import { audioManager } from '@/lib/audioManager'
 
-const WALK_SPEED = 4.0
+const WALK_SPEED = 5.0
 const JUMP_VEL = 7
 const GRAVITY = -22
 const PLAYER_HEIGHT = 1.72
@@ -61,8 +61,8 @@ export function FirstPersonController({ joystickMove, joystickLook, jumpTrigger,
     const onClick = () => { if (!locked.current) canvas.requestPointerLock() }
     const onMove = (e: MouseEvent) => {
       if (!locked.current) return
-      yaw.current -= e.movementX * 0.0014
-      pitch.current = Math.max(-1.05, Math.min(0.75, pitch.current - e.movementY * 0.0014))
+      yaw.current -= e.movementX * 0.0018
+      pitch.current = Math.max(-1.05, Math.min(0.75, pitch.current - e.movementY * 0.0018))
     }
     const onLockChange = () => { locked.current = document.pointerLockElement === canvas }
     canvas.addEventListener('click', onClick)

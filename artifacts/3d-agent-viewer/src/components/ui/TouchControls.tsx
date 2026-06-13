@@ -38,7 +38,7 @@ interface TouchEntry {
   side: 'left' | 'right'
 }
 
-const LOOK_SENS = 0.0016
+const LOOK_SENS = 0.0025
 
 export function TouchControls({ joystickMove, joystickLook }: Props) {
   const [leftDelta, setLeftDelta] = useState<JoyState>({ x: 0, y: 0 })
