@@ -32,7 +32,7 @@ router.get("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const [agent] = await db.select().from(agentsTable).where(eq(agentsTable.id, id));
-    if (!agent) return res.status(404).json({ error: "Not found" });
+    if (!agent) { res.status(404).json({ error: "Not found" }); return; }
     res.json({
       id: agent.id,
       name: agent.name,

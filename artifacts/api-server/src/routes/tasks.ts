@@ -30,7 +30,7 @@ router.get("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
-    if (!task) return res.status(404).json({ error: "Not found" });
+    if (!task) { res.status(404).json({ error: "Not found" }); return; }
     res.json({
       id: task.id,
       title: task.title,
