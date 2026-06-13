@@ -93,8 +93,7 @@ function checkWebGL(): boolean {
 // ── Scene background that matches game time ───────────────────────────────────
 function SceneBackground() {
   const { lightConfig } = useGameTime();
-  useFrame(({ scene }) => { scene.background = new THREE.Color(lightConfig.bgColor); });
-  return null;
+  return <color attach="background" args={[lightConfig.bgColor]} />;
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
