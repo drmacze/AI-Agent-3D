@@ -27,8 +27,23 @@ function useIsMobile() {
   return isMobile;
 }
 
+function useIsPortrait() {
+  const [portrait, setPortrait] = useState(() => window.innerHeight > window.innerWidth);
+  useEffect(() => {
+    const handler = () => setPortrait(window.innerHeight > window.innerWidth);
+    window.addEventListener("resize", handler);
+    window.addEventListener("orientationchange", handler);
+    return () => {
+      window.removeEventListener("resize", handler);
+      window.removeEventListener("orientationchange", handler);
+    };
+  }, []);
+  return portrait;
+}
+
 export default function Home() {
   const isMobile = useIsMobile();
+  const isPortrait = useIsPortrait();
   const [selectedAgentId, setSelectedAgentId] = useState<number | string | null>(null);
   const [chatTarget, setChatTarget] = useState<ChatTarget>(null);
   const [leftOpen, setLeftOpen] = useState(!isMobile);
@@ -53,10 +68,18 @@ export default function Home() {
     if (gameState === "playing") {
       audioManager.resume();
       audioManager.startAmbientMusic();
+      // Auto-rotate to landscape on mobile
+      try {
+        screen.orientation?.lock?.("landscape-primary").catch(() => {});
+      } catch {}
     } else {
       audioManager.stopAmbientMusic();
+      try { screen.orientation?.unlock?.(); } catch {}
     }
-    return () => { audioManager.stopAmbientMusic(); };
+    return () => {
+      audioManager.stopAmbientMusic();
+      try { screen.orientation?.unlock?.(); } catch {}
+    };
   }, [gameState]);
 
   const handleSelectAgent = useCallback((id: number | string) => setSelectedAgentId(id), []);
@@ -186,6 +209,19 @@ export default function Home() {
       )}
 
       <ElevatorUI />
+
+      {/* Rotate device hint — shown on mobile portrait while playing (for iOS that ignores orientation lock) */}
+      {isMobile && isPortrait && gameState === "playing" && !chatTarget && (
+        <div
+          className="fixed inset-0 z-[9000] flex flex-col items-center justify-center gap-4 pointer-events-none"
+          style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(4px)" }}
+        >
+          <div style={{ fontSize: 56, animation: "spin90 1.2s ease-in-out infinite alternate" }}>📱</div>
+          <div className="text-white font-bold text-base text-center px-6">Putar perangkat ke landscape</div>
+          <div className="text-white/50 text-xs text-center px-8">Untuk pengalaman terbaik di mode 3D</div>
+          <style>{`@keyframes spin90 { from { transform: rotate(0deg); } to { transform: rotate(90deg); } }`}</style>
+        </div>
+      )}
     </div>
   );
 }
