@@ -1,8 +1,9 @@
-import { useRef, useMemo, useEffect } from "react";
+import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import type { NpcAgent } from "@/context/FloorContext";
+import { useGameStore } from "@/store/gameStore";
 
 const SKIN_TONES = ["#f4c39a","#d4956a","#c07850","#8b5e3c","#a0784a","#e8b89a","#f0d0a8","#c89870"];
 const HAIR_COLORS = ["#1a0f06","#3a2010","#0f0f0f","#6b4a08","#3a1a08","#b07030","#f0c060","#1a1a3a"];
@@ -76,8 +77,11 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
   const typingPhase = useRef(Math.random() * Math.PI * 2);
   const blinkTimer = useRef(Math.random() * 4 + 2);
   const blinkOpen  = useRef(true);
+  const bumpRef    = useRef(0);
   const targetPos  = useMemo(() => new THREE.Vector3(agent.positionX, 0, agent.positionZ), [agent.positionX, agent.positionZ]);
   const currentPos = useRef(new THREE.Vector3(agent.positionX, 0, agent.positionZ));
+
+  const bubble = useGameStore(state => state.npcBubbles[agent.id] ?? null);
 
   // Internal status that can evolve independently
   const liveStatus = useRef(agent.status);
@@ -112,8 +116,21 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
       }
     }
 
+    // Bump reaction
+    const reaction = useGameStore.getState().npcReactions[agent.id]
+    if (reaction?.kind === 'bump') {
+      bumpRef.current = Math.min(1, bumpRef.current + delta * 8)
+    } else {
+      bumpRef.current = Math.max(0, bumpRef.current - delta * 4)
+    }
+
     currentPos.current.lerp(targetPos, Math.min(delta * 2.2, 1));
     groupRef.current.position.copy(currentPos.current);
+    if (bumpRef.current > 0.01) {
+      groupRef.current.position.y += Math.abs(Math.sin(state.clock.elapsedTime * 18)) * bumpRef.current * 0.22;
+      if (rightArmRef.current) { rightArmRef.current.rotation.x = -0.9 * bumpRef.current; rightArmRef.current.rotation.z = -0.5 * bumpRef.current; }
+      if (leftArmRef.current) { leftArmRef.current.rotation.x = -0.9 * bumpRef.current; leftArmRef.current.rotation.z = 0.5 * bumpRef.current; }
+    }
 
     const moving = currentPos.current.distanceTo(targetPos) > 0.15;
 
@@ -331,6 +348,22 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
         {/* Ears */}
         <mesh position={[-0.137, 0.02, 0]}><boxGeometry args={[0.02, 0.055, 0.05]} /><meshLambertMaterial color={skinColor} /></mesh>
         <mesh position={[ 0.137, 0.02, 0]}><boxGeometry args={[0.02, 0.055, 0.05]} /><meshLambertMaterial color={skinColor} /></mesh>
+
+        {/* Conversation bubble */}
+        {bubble && (
+          <Html position={[0, 0.72, 0]} center zIndexRange={[200, 0]} className="pointer-events-none select-none">
+            <div style={{
+              background: 'rgba(10,10,25,0.88)', color: '#f0f0ff',
+              border: `1.5px solid ${accentColor}80`, borderRadius: 12,
+              padding: '5px 12px', fontSize: 11, fontWeight: 600,
+              maxWidth: 180, textAlign: 'center', lineHeight: 1.35,
+              backdropFilter: 'blur(8px)', boxShadow: `0 4px 18px rgba(0,0,0,0.5), 0 0 8px ${accentColor}30`,
+              animation: 'none', whiteSpace: 'normal',
+            }}>
+              💬 {bubble.text}
+            </div>
+          </Html>
+        )}
 
         {/* Activity bubble */}
         <Html position={[0, 0.46, 0]} center zIndexRange={[100, 0]} className="pointer-events-none select-none">

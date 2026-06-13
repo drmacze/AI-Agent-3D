@@ -1,6 +1,6 @@
-import { Suspense, useMemo, useRef, Component, ReactNode, useState, useEffect } from "react";
+import { Suspense, useMemo, useRef, useCallback, Component, ReactNode, useState, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, MeshReflectorMaterial, Stars } from "@react-three/drei";
+import { MeshReflectorMaterial, Stars } from "@react-three/drei";
 import * as THREE from "three";
 import { useListAgents, getListAgentsQueryKey } from "@workspace/api-client-react";
 import { AgentAvatar } from "./AgentAvatar";
@@ -9,6 +9,14 @@ import { PlayerAvatar } from "./PlayerAvatar";
 import { ConnectionLine } from "./ConnectionLine";
 import { useGameTime } from "@/context/GameTimeContext";
 import { useFloor, FLOOR_THEMES, type FloorId, type NpcAgent } from "@/context/FloorContext";
+import { useGameStore } from "@/store/gameStore";
+import { FirstPersonController } from "./FirstPersonController";
+import { LobbyCamera } from "./LobbyCamera";
+import { CityExterior } from "./CityExterior";
+import { DeveloperRoom } from "./DeveloperRoom";
+import { NpcConversations } from "./NpcConversations";
+import { PostProcessingEffects } from "./PostProcessingEffects";
+import { TouchControls } from "@/components/ui/TouchControls";
 
 // ── WebGL error boundary ──────────────────────────────────────────────────────
 class WebGLErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -216,7 +224,7 @@ function CoffeeStation({ accent }: { accent: string }) {
   useFrame((state) => {
     if (!steamRef.current) return;
     steamRef.current.position.y = 1.2 + Math.sin(state.clock.elapsedTime * 1.5) * 0.04;
-    steamRef.current.material.opacity = 0.3 + Math.sin(state.clock.elapsedTime * 2) * 0.12;
+    (steamRef.current.material as THREE.MeshLambertMaterial).opacity = 0.3 + Math.sin(state.clock.elapsedTime * 2) * 0.12;
   });
   return (
     <group position={[-10.5, 0, -8]}>
@@ -451,6 +459,7 @@ interface Props {
   onSelectAgent: (id: number | string) => void;
   selectedAgentId: number | string | null;
   onChatAgent: (agent: unknown) => void;
+  onNearNpc?: (name: string | null, agentData?: unknown) => void;
 }
 
 function checkWebGL() {
@@ -460,9 +469,14 @@ function checkWebGL() {
   } catch { return false; }
 }
 
-export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent }: Props) {
+export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNearNpc }: Props) {
   const webGLAvailable = useMemo(() => checkWebGL(), []);
+  const gameState = useGameStore(s => s.gameState);
   const { currentFloor, getNpcsByFloor, isRiding } = useFloor();
+
+  const joystickMove = useRef({ x: 0, y: 0 });
+  const joystickLook = useRef({ x: 0, y: 0 });
+  const jumpTrigger  = useRef(false);
 
   const { data: floor1Agents } = useListAgents({
     query: { refetchInterval: 2500, queryKey: getListAgentsQueryKey() },
@@ -470,6 +484,13 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent }: Prop
 
   const npcs = useMemo(() => getNpcsByFloor(currentFloor), [currentFloor, getNpcsByFloor]);
   const isFloor1 = currentFloor === 1;
+
+  const npcPositions = useMemo(() => {
+    if (isFloor1 && floor1Agents) {
+      return floor1Agents.map(a => ({ id: String(a.id), name: a.name, x: a.positionX, z: a.positionZ, agentData: a }));
+    }
+    return npcs.map(n => ({ id: n.id, name: n.name, x: n.positionX, z: n.positionZ, agentData: { ...n, isNpc: true } }));
+  }, [isFloor1, floor1Agents, npcs]);
 
   const chattingPairs = useMemo(() => {
     if (!floor1Agents || !isFloor1) return [];
@@ -495,10 +516,10 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent }: Prop
   );
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full" style={{ position: 'relative' }}>
       <WebGLErrorBoundary>
         <Canvas
-          camera={{ position: [0, 14, 14], fov: 42 }}
+          camera={{ fov: 70 }}
           dpr={[1, 1.5]}
           performance={{ min: 0.5 }}
           gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.15 }}
@@ -507,12 +528,37 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent }: Prop
           <SceneBackground />
           <DynamicLights floorId={currentFloor} />
 
+          {/* Camera control — lobby = cinematic orbit, playing = first-person */}
+          {gameState === 'lobby'   && <LobbyCamera />}
+          {gameState === 'playing' && (
+            <FirstPersonController
+              joystickMove={joystickMove}
+              joystickLook={joystickLook}
+              jumpTrigger={jumpTrigger}
+              npcPositions={npcPositions}
+              onNearNpc={onNearNpc}
+            />
+          )}
+
+          {/* Post-processing: bloom + vignette */}
+          <PostProcessingEffects />
+
           <Suspense fallback={null}>
+            <Stars radius={80} depth={40} count={800} factor={4} fade speed={1} />
             <ReflectiveFloor floorId={currentFloor} />
             <FloorProps floorId={currentFloor} />
 
-            {/* Player character */}
-            <PlayerAvatar position={playerPos} />
+            {/* City exterior visible through windows */}
+            <CityExterior />
+
+            {/* Developer room (Drmacze) */}
+            <DeveloperRoom />
+
+            {/* NPC-to-NPC conversation bubbles */}
+            <NpcConversations />
+
+            {/* Player character (only visible in lobby / third-person view) */}
+            {gameState === 'lobby' && <PlayerAvatar position={playerPos} />}
 
             {/* Floor 1 — DB agents */}
             {isFloor1 && floor1Agents?.map(agent => (
@@ -534,7 +580,7 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent }: Prop
               />
             ))}
 
-            {/* Chat connection lines */}
+            {/* Chat connection lines (floor 1) */}
             {isFloor1 && floor1Agents && chattingPairs.map(([id1, id2]) => {
               const a1 = floor1Agents.find(a => a.id === id1);
               const a2 = floor1Agents.find(a => a.id === id2);
@@ -552,17 +598,17 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent }: Prop
             {/* Elevator transition effect */}
             {isRiding && <ElevatorRideEffect />}
           </Suspense>
-
-          <OrbitControls
-            makeDefault
-            minPolarAngle={Math.PI / 10}
-            maxPolarAngle={Math.PI / 2.1}
-            minDistance={6}
-            maxDistance={35}
-            target={[0, 0, 0]}
-          />
         </Canvas>
       </WebGLErrorBoundary>
+
+      {/* Touch joystick (rendered over canvas, outside WebGL) */}
+      {gameState === 'playing' && (
+        <TouchControls
+          joystickMove={joystickMove}
+          joystickLook={joystickLook}
+          jumpTrigger={jumpTrigger}
+        />
+      )}
     </div>
   );
 }
