@@ -4,6 +4,7 @@ import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import type { NpcAgent } from "@/context/FloorContext";
 import { useGameStore } from "@/store/gameStore";
+import { audioManager } from "@/lib/audioManager";
 
 const SKIN_TONES = ["#f4c39a","#d4956a","#c07850","#8b5e3c","#a0784a","#e8b89a","#f0d0a8","#c89870"];
 const HAIR_COLORS = ["#1a0f06","#3a2010","#0f0f0f","#6b4a08","#3a1a08","#b07030","#f0c060","#1a1a3a"];
@@ -78,6 +79,8 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
   const blinkTimer = useRef(Math.random() * 4 + 2);
   const blinkOpen  = useRef(true);
   const bumpRef    = useRef(0);
+  const bumpWasActive = useRef(false);
+  const npcChatTimer  = useRef(2 + Math.random() * 4);
   const targetPos  = useMemo(() => new THREE.Vector3(agent.positionX, 0, agent.positionZ), [agent.positionX, agent.positionZ]);
   const currentPos = useRef(new THREE.Vector3(agent.positionX, 0, agent.positionZ));
 
@@ -116,12 +119,26 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
       }
     }
 
-    // Bump reaction
+    // Bump reaction + sound
     const reaction = useGameStore.getState().npcReactions[agent.id]
     if (reaction?.kind === 'bump') {
       bumpRef.current = Math.min(1, bumpRef.current + delta * 8)
+      if (!bumpWasActive.current) {
+        bumpWasActive.current = true;
+        audioManager.playBump();
+      }
     } else {
       bumpRef.current = Math.max(0, bumpRef.current - delta * 4)
+      if (bumpRef.current < 0.05) bumpWasActive.current = false;
+    }
+
+    // NPC chatter sounds when chatting
+    if (liveStatus.current === "chatting" || liveStatus.current === "presenting") {
+      npcChatTimer.current -= delta;
+      if (npcChatTimer.current <= 0) {
+        audioManager.playNpcChat(agent.id, seed);
+        npcChatTimer.current = 2.5 + Math.random() * 4.5;
+      }
     }
 
     currentPos.current.lerp(targetPos, Math.min(delta * 2.2, 1));

@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useGameStore } from '@/store/gameStore'
+import { audioManager } from '@/lib/audioManager'
 
 const WALK_SPEED = 5
 const RUN_SPEED = 10
@@ -45,6 +46,9 @@ export function FirstPersonController({ joystickMove, joystickLook, jumpTrigger,
   const pos = useRef(new THREE.Vector3(0, PLAYER_HEIGHT, 7))
   const locked = useRef(false)
   const nearNpc = useRef<string | null>(null)
+  const footstepTimer = useRef(0)
+  const wasGrounded = useRef(true)
+  const wasJumping = useRef(false)
 
   useEffect(() => {
     camera.position.copy(pos.current)
@@ -116,6 +120,8 @@ export function FirstPersonController({ joystickMove, joystickLook, jumpTrigger,
       vel.current.y = JUMP_VEL
       grounded.current = false
       jumpTrigger.current = false
+      wasJumping.current = true
+      audioManager.playJump()
     }
     if (jumpTrigger.current) jumpTrigger.current = false
 
@@ -128,8 +134,33 @@ export function FirstPersonController({ joystickMove, joystickLook, jumpTrigger,
     if (!isBlocked(pos.current.x, nz)) pos.current.z = nz
     pos.current.y += vel.current.y * d
 
+    const justLanded = !wasGrounded.current && pos.current.y <= PLAYER_HEIGHT + 0.01
     if (pos.current.y <= PLAYER_HEIGHT) {
       pos.current.y = PLAYER_HEIGHT; vel.current.y = 0; grounded.current = true
+    }
+
+    // Jump sound
+    if (wasJumping.current && !grounded.current) {
+      wasJumping.current = false
+    }
+
+    // Land sound
+    if (justLanded) {
+      audioManager.playLand()
+    }
+    wasGrounded.current = grounded.current
+
+    // Footstep sounds when moving on ground
+    const isMoving = move.lengthSq() > 0
+    if (isMoving && grounded.current) {
+      const interval = sprint ? 0.27 : 0.42
+      footstepTimer.current += d
+      if (footstepTimer.current >= interval) {
+        footstepTimer.current = 0
+        audioManager.playFootstep(sprint)
+      }
+    } else {
+      footstepTimer.current = 0
     }
 
     camera.position.copy(pos.current)

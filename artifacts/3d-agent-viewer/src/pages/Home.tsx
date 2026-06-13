@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { FloorScene } from "@/components/3d/FloorScene";
+import { audioManager } from "@/lib/audioManager";
 import { AgentListHUD } from "@/components/hud/AgentListHUD";
 import { ActivityFeedHUD } from "@/components/hud/ActivityFeedHUD";
 import { SelectedAgentHUD } from "@/components/hud/SelectedAgentHUD";
@@ -35,6 +36,17 @@ export default function Home() {
       setLeftOpen(true);
       setRightOpen(true);
     }
+  }, [gameState]);
+
+  // Ambient office music — starts when entering the world
+  useEffect(() => {
+    if (gameState === 'playing') {
+      audioManager.resume();
+      audioManager.startAmbientMusic();
+    } else {
+      audioManager.stopAmbientMusic();
+    }
+    return () => { audioManager.stopAmbientMusic(); };
   }, [gameState]);
 
   const handleSelectAgent = useCallback((id: number | string) => {

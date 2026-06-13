@@ -1,2 +1,4 @@
 - [DLavie OS project overview](dlavie-os.md) — monorepo 3D office sim; DB agents Floor 1, NPC agents Floors 2-5; always run db:push + seed after fresh deploy.
 - [DLavie OS FPS upgrade](dlavie-os-fps.md) — Zustand gameStore + LobbyCamera/FirstPersonController + bump reactions + NpcConversations; key R3F camera typing gotcha.
+- [Audio system](audio-system.md) — procedural Web Audio API singleton at src/lib/audioManager.ts; no CDN, all sounds generated in-browser via oscillators + noise buffers.
+- [Graphics settings in R3F](graphics-settings.md) — dpr is dynamic via Canvas prop; shadows/antialias require remount to fully apply; bloom is conditional render so instant.

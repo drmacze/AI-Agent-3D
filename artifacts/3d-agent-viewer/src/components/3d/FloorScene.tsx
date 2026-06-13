@@ -17,6 +17,8 @@ import { DeveloperRoom } from "./DeveloperRoom";
 import { NpcConversations } from "./NpcConversations";
 import { PostProcessingEffects } from "./PostProcessingEffects";
 import { TouchControls } from "@/components/ui/TouchControls";
+import { useSettings } from "@/context/SettingsContext";
+import { FPSCounter } from "@/components/ui/FPSCounter";
 
 // ── WebGL error boundary ──────────────────────────────────────────────────────
 class WebGLErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -473,6 +475,7 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
   const webGLAvailable = useMemo(() => checkWebGL(), []);
   const gameState = useGameStore(s => s.gameState);
   const { currentFloor, getNpcsByFloor, isRiding } = useFloor();
+  const { settings } = useSettings();
 
   const joystickMove = useRef({ x: 0, y: 0 });
   const joystickLook = useRef({ x: 0, y: 0 });
@@ -520,10 +523,10 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
       <WebGLErrorBoundary>
         <Canvas
           camera={{ fov: 70 }}
-          dpr={[1, 1.5]}
+          dpr={settings.pixelRatio}
           performance={{ min: 0.5 }}
-          gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.15 }}
-          shadows={false}
+          gl={{ antialias: settings.antialias, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.15 }}
+          shadows={settings.shadowsEnabled}
         >
           <SceneBackground />
           <DynamicLights floorId={currentFloor} />
@@ -541,7 +544,7 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
           )}
 
           {/* Post-processing: bloom + vignette */}
-          <PostProcessingEffects />
+          {settings.bloomEnabled && <PostProcessingEffects />}
 
           <Suspense fallback={null}>
             <Stars radius={80} depth={40} count={800} factor={4} fade speed={1} />
@@ -609,6 +612,9 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
           jumpTrigger={jumpTrigger}
         />
       )}
+
+      {/* FPS Counter overlay */}
+      {settings.showFPS && <FPSCounter />}
     </div>
   );
 }

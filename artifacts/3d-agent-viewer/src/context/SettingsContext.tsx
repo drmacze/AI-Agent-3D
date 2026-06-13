@@ -1,6 +1,9 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { audioManager } from "@/lib/audioManager";
 
 export type ApiProvider = "openai" | "anthropic" | "groq" | "kimi" | "openclaw";
+export type GraphicsQuality = "low" | "medium" | "high" | "ultra";
+export type FpsLimit = 30 | 60 | 120 | 0;
 
 export interface Settings {
   apiKey: string;
@@ -12,6 +15,17 @@ export interface Settings {
   playerHairStyle: "short" | "medium" | "long" | "bun";
   openclawGatewayUrl: string;
   openclawAgentId: string;
+  masterVolume: number;
+  musicVolume: number;
+  sfxVolume: number;
+  graphicsQuality: GraphicsQuality;
+  fpsLimit: FpsLimit;
+  shadowsEnabled: boolean;
+  antialias: boolean;
+  showFPS: boolean;
+  pixelRatio: number;
+  bloomEnabled: boolean;
+  fogEnabled: boolean;
 }
 
 interface SettingsContextType {
@@ -33,6 +47,24 @@ const DEFAULT: Settings = {
   playerHairStyle: "short",
   openclawGatewayUrl: "http://localhost:18789",
   openclawAgentId: "default",
+  masterVolume: 0.7,
+  musicVolume: 0.45,
+  sfxVolume: 0.8,
+  graphicsQuality: "high",
+  fpsLimit: 0,
+  shadowsEnabled: false,
+  antialias: true,
+  showFPS: false,
+  pixelRatio: 1,
+  bloomEnabled: true,
+  fogEnabled: true,
+};
+
+const QUALITY_PRESETS: Record<GraphicsQuality, Partial<Settings>> = {
+  low:    { shadowsEnabled: false, antialias: false, pixelRatio: 0.5, bloomEnabled: false, fogEnabled: false },
+  medium: { shadowsEnabled: false, antialias: false, pixelRatio: 0.75, bloomEnabled: false, fogEnabled: true  },
+  high:   { shadowsEnabled: false, antialias: true,  pixelRatio: 1,    bloomEnabled: true,  fogEnabled: true  },
+  ultra:  { shadowsEnabled: true,  antialias: true,  pixelRatio: 1.5,  bloomEnabled: true,  fogEnabled: true  },
 };
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
@@ -53,11 +85,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(loadSettings);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
 
+  useEffect(() => {
+    audioManager.setMasterVolume(settings.masterVolume);
+    audioManager.setMusicVolume(settings.musicVolume);
+    audioManager.setSfxVolume(settings.sfxVolume);
+  }, [settings.masterVolume, settings.musicVolume, settings.sfxVolume]);
+
   const updateSettings = useCallback((patch: Partial<Settings>) => {
     setSettings(prev => {
-      const next = { ...prev, ...patch };
-      saveSettings(next);
-      return next;
+      let merged = { ...prev, ...patch };
+      if (patch.graphicsQuality && patch.graphicsQuality !== prev.graphicsQuality) {
+        merged = { ...merged, ...QUALITY_PRESETS[patch.graphicsQuality] };
+      }
+      saveSettings(merged);
+      return merged;
     });
   }, []);
 
@@ -71,7 +112,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       hasApiKey: settings.apiProvider === "openclaw"
         ? !!settings.openclawGatewayUrl.trim()
         : !!settings.apiKey.trim(),
-
     }}>
       {children}
     </SettingsContext.Provider>
