@@ -72,7 +72,14 @@ const SettingsContext = createContext<SettingsContextType | null>(null);
 function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem("dlavie_settings");
-    if (raw) return { ...DEFAULT, ...JSON.parse(raw) };
+    if (raw) {
+      const saved = JSON.parse(raw) as Partial<Settings>;
+      // Migrate old localhost OpenClaw URLs to the public default
+      if (saved.openclawGatewayUrl && /localhost|127\.0\.0\.1/.test(saved.openclawGatewayUrl)) {
+        saved.openclawGatewayUrl = DEFAULT.openclawGatewayUrl;
+      }
+      return { ...DEFAULT, ...saved };
+    }
   } catch {}
   return DEFAULT;
 }

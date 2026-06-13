@@ -39,7 +39,7 @@ router.post("/:agentId", async (req, res) => {
 
   try {
     if (provider === "openclaw") {
-      fullResponse = await streamOpenClaw(openclawGatewayUrl ?? "http://localhost:18789", openclawAgentId ?? "default", systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
+      fullResponse = await streamOpenClaw(openclawGatewayUrl ?? "https://openclaw.ai", openclawAgentId ?? "default", systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
     } else if (provider === "anthropic") {
       fullResponse = await streamAnthropic(apiKey!, systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
     } else if (provider === "groq") {
@@ -89,7 +89,7 @@ Keep responses concise (2-4 sentences). You're speaking to ${playerName}, a coll
 
   try {
     if (provider === "openclaw") {
-      fullResponse = await streamOpenClaw(openclawGatewayUrl ?? "http://localhost:18789", openclawAgentId ?? "default", systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
+      fullResponse = await streamOpenClaw(openclawGatewayUrl ?? "https://openclaw.ai", openclawAgentId ?? "default", systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
     } else if (provider === "anthropic") {
       fullResponse = await streamAnthropic(apiKey!, systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
     } else if (provider === "groq") {

@@ -400,16 +400,16 @@ export function SettingsOverlay() {
                   </div>
                 </div>
                 <p className="text-xs text-orange-700">
-                  Connect to your locally-running OpenClaw gateway to power all agent conversations with your personal AI assistant.
+                  Connect your OpenClaw gateway to power agent conversations. Use a publicly accessible URL — <span className="font-semibold">localhost will not work</span> when the app is hosted online.
                 </p>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Gateway URL</label>
                 <input type="text" value={settings.openclawGatewayUrl}
                   onChange={e => updateSettings({ openclawGatewayUrl: e.target.value })}
-                  placeholder="http://localhost:18789"
+                  placeholder="https://openclaw.ai"
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent font-mono" />
-                <p className="text-xs text-gray-400 mt-1">Default: http://localhost:18789</p>
+                <p className="text-xs text-gray-400 mt-1">Must be a public URL, not localhost. Default: https://openclaw.ai</p>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Agent ID</label>
@@ -423,9 +423,11 @@ export function SettingsOverlay() {
                 <div className="bg-gray-900 rounded-xl p-3 font-mono text-xs text-green-400 space-y-1">
                   <div><span className="text-gray-500"># Install OpenClaw</span></div>
                   <div>npm install -g openclaw@latest</div>
-                  <div className="mt-1"><span className="text-gray-500"># Start gateway</span></div>
+                  <div className="mt-1"><span className="text-gray-500"># Start with public tunnel (e.g. ngrok)</span></div>
                   <div>openclaw gateway --port 18789</div>
+                  <div>ngrok http 18789</div>
                 </div>
+                <p className="text-xs text-gray-400">Use the ngrok URL (e.g. https://xxxx.ngrok.io) as your Gateway URL above.</p>
               </div>
             </>
           )}
