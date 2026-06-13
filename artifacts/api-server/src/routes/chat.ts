@@ -53,7 +53,7 @@ router.post("/:agentId", async (req, res) => {
       fullResponse = await streamOpenAI(apiKey!, systemPrompt, message, playerName, (c) => res.write(`data: ${JSON.stringify({ content: c })}\n\n`));
     }
     await db.insert(agentMessagesTable).values({ agentId, content: fullResponse, type: "chat" });
-    await db.insert(activityEventsTable).values({ agentId, type: "chat", description: `${agent.name} replied to ${playerName}`, metadata: JSON.stringify({ preview: fullResponse.slice(0, 80) }) });
+    await db.insert(activityEventsTable).values({ agentId, agentName: agent.name, eventType: "chat", description: `${agent.name} replied to ${playerName}` });
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "AI request failed";

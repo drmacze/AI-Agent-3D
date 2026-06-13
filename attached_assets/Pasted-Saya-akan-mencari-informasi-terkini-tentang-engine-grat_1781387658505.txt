@@ -1,0 +1,123 @@
+Saya akan mencari informasi terkini tentang engine gratis yang cocok untuk Replit dan referensi peningkatan game office 3D.
+articleweb_search:1#2web_search:1#3web_search:1#5
+Berdasarkan screenshot DLavie OS yang kamu kirim, ini adalah virtual office 3D berbasis browser dengan AI NPC agents. Untuk meningkatkannya mendekati kualitas GTA 5 (khususnya interior office seperti GTA Online Executive Offices) meski tetap confined di satu gedung kantor, berikut adalah rekomendasi komprehensif dari engine hingga teknik visual.
+1.  Engine Gratis Terbaik untuk Replit Agent
+Jangan pakai Unity atau Godot untuk project web-based di Replit. Hasil research menunjukkan Godot web export >30MB dengan performa buruk di browser, dan Unity WebGL tidak support mobile dengan baik serta build time sangat lama.citeweb_search:1#3
+🥇 Pilihan Utama: Babylon.js (Highly Recommended)
+•  Full game engine web-native dengan physics Havok (WASM), audio, GUI, particle system, dan animation state machine built-in.citeweb_search:1#5
+•  Bundle size ~1.4MB vs Godot >30MB, performa 60FPS di browser bahkan dengan puluhan rigged characters.citeweb_search:1#3
+•  Cocok untuk Replit Agent karena 100% TypeScript/JavaScript, bisa deploy langsung sebagai web app di Replit.
+•  Ada Babylon Playground (online IDE) untuk prototyping cepat sebelum integrasi ke Replit.
+•  Support WebGPU untuk grafis next-gen di browser.
+🥈 Pilihan Alternatif: Three.js + React Three Fiber (R3F)
+•  Lebih fleksibel jika kamu ingin arsitektur React-based (cocok untuk UI DLavie OS yang kompleks).
+•  Ekosistem besar (5 juta weekly downloads), tapi butuh setup manual untuk physics, audio, dan animation.citeweb_search:1#5
+•  Cocok jika tim kamu sudah familiar dengan React/Next.js.
+❌ Hindari untuk Project Ini:
+•  Godot 4: Web export tidak support C#, bundle besar, input keyboard broken di mobile web.citeweb_search:1#3
+•  Unity: WebGL build lambat, tidak optimal untuk mobile browser, dan terlalu berat untuk Replit environment.citeweb_search:1#3
+----
+2.  Referensi Visual: GTA 5 Office Interiors
+Dari GTA Online, Executive Offices memiliki ciri khas desain interior yang bisa jadi referensi langsung:citeweb_search:1#1
+Elemen	Referensi GTA 5	Aplikasi untuk DLavie OS
+Lobby & Reception	Executive entrance dengan assistant desk	Area lobby dengan NPC receptionist interaktif
+Executive Suite	CEO desk dengan terminal, hidden safe/gun locker	CEO room dengan desk interaktif untuk "Tasks"
+Boardroom	Meeting room dengan diorama/meja besar	Ruang meeting untuk collab AI agents
+Breakout Space	Area rekreasi, sofa, pantry	Lounge area untuk NPC "Idle" state
+Living Quarters	Bed, wardrobe, bathroom (accommodation upgrade)	Private room untuk user rest/spawn
+Garage/Auto Shop	Custom vehicle storage	Skip (tetap office-only sesuai konsep)
+Key Takeaway: GTA 5 office terasa realistis karena zonasi ruang jelas (lobby → workspace → executive → utility) dengan props yang berfungsi (bukan hanya dekorasi).
+----
+3.  Peningkatan NPC Animation (Dari Blocky ke Realistis)
+Screenshot menunjukkan NPC masih blocky/low-poly dengan animasi minimal. Untuk upgrade:
+A. Character Model & Rigging
+•  Ganti dari blocky ke stylized humanoid (mirip GTA 5 tapi stylized, bukan hyper-realistic untuk hemat resource).
+•  Gunakan Mixamo (gratis dari Adobe) untuk auto-rigging dan library animasi:
+•  Idle variations (standing, checking phone, arms crossed)
+•  Walking, running, sitting, typing, gesturing while talking
+•  Root Motion: Pindahkan posisi NPC via animasi (lebih natural daripada translate code).
+B. Animation State Machine
+Implementasi layer animasi seperti GTA 5 ped system:
+Base Layer: Idle/Walk/Run/Sit
+Upper Body Layer: Typing, Holding Phone, Gesturing
+Face Layer: Talking, Blinking, Emotional expressions
+C. Facial Animation & Lip Sync
+•  Omniverse Audio2Face (NVIDIA, gratis untuk development): Generate facial animation real-time dari audio/text-to-speech NPC.citeweb_search:1#4
+•  Blendshapes minimal: Blink, JawOpen, Smile, EyebrowRaise.
+•  Eye Tracking: NPC melihat ke arah player atau objek yang diinteraksi (IK LookAt).
+D. Contextual Animation AI
+•  Integrasikan LLM dengan text-to-motion (MotionGPT/T2M-GPT): NPC memilih animasi sesuai konteks percakapan.citeweb_search:1#2
+•  Contoh: Jika AI agent bilang "mari kita duduk", NPC trigger animasi sit_down dan idle_sitting.
+4.  Environment & Props (Interior Office Realistis)
+A. Modular Environment Design
+•  Modular Kit: Buat set modular walls, floors, ceilings, windows, doors yang bisa di-tile untuk membangun lantai berbeda.
+•  Reference: GTA 5 office menggunakan 9 interior themes (Executive Rich, Old Spice Classical, Power Broker Ice, dll).citeweb_search:1#1
+B. PBR Materials (Physically Based Rendering)
+•  Gunakan texture Albedo, Normal, Roughness, Metallic untuk:
+•  Lantai kayu/marmer mengkilap
+•  Kaca reflektif pada jendela dan meja
+•  Fabric sofa dengan roughness tinggi
+•  Metal pada komputer/perkakas
+C. Lighting Setup (Critical!)
+•  Directional Light untuk simulasi matahari masuk lewat jendela.
+•  Point Lights pada lampu meja, ceiling lights, monitor glow.
+•  Shadows: Real-time soft shadows (PCSS/Contact Shadows) agar NPC dan props "menempel" di lantai.
+•  Ambient Occlusion: SSAO atau baked AO untuk sudut-sudut gelap natural.
+•  Reflection Probes: Untuk refleksi realistis di lantai dan meja.
+D. Props Detail
+Area	Props Esensial
+Workstation	Monitor dual/triple, keyboard, mouse, kabel, sticky notes, coffee mug
+Executive	Leather chair, nameplate, family photo frame, trophy, bookshelf
+Pantry	Vending machine, microwave, water dispenser, sofa
+Utility	Printer, filing cabinet, whiteboard dengan marker, potted plants
+Elevator	Panel lantai, mirror, handrail, floor indicator
+E. Post-Processing Stack
+•  Bloom: Lampu dan monitor glow.
+•  Color Grading: LUT untuk tone "corporate office" (cool blue-white) vs "executive suite" (warm golden).
+•  Depth of Field: Blur background saat fokus ke NPC (saat chat mode).
+•  Vignette: Subtle darkening di pinggir layar.
+----
+5.  Integrasi AI + Gameplay Pipeline
+Karena ini AI Chat 3D, animasi harus sinkron dengan respons LLM:
+User Chat → LLM (NeMo/Custom) → Response Text
+↓
+TTS (Text-to-Speech) → Audio2Face → Facial Animation
+↓
+Gesture AI (DiffSHEG/T2M) → Body Gesture Animation
+↓
+Babylon.js Animation State Machine → Play in Engine
+Tips Implementasi:
+•  NeMo Guardrails: Atur supaya NPC tidak off-topic dan tetap sesuai persona (CEO, Engineer, HR).citeweb_search:1#4
+•  Behavior Cloning: Latih NPC dengan backstory spesifik per karakter (ARIA, ECHO, VEGA, dll).
+•  Real-time Streaming: Streaming response LLM agar NPC tidak "frozen" saat mikir (tampilkan animasi "thinking" seperti mengetik atau melihat phone).
+6.  Roadmap Peningkatan Bertahap (Replit-Friendly)
+Fase 1: Foundation (Babylon.js Migration)
+•  Setup Babylon.js di Replit dengan TypeScript template.
+•  Import environment modular (1 lantai dulu).
+•  PBR materials + lighting setup dasar.
+Fase 2: Character Overhaul
+•  Ganti model NPC dengan humanoid stylized (gunakan ReadyPlayerMe atau self-made di Blender).
+•  Integrasi Mixamo animations (idle, walk, sit, talk).
+•  Basic facial animation (blink + jaw).
+Fase 3: AI Integration
+•  Hubungkan LLM API dengan Babylon.js animation trigger.
+•  Implementasi TTS + lip sync sederhana.
+•  Contextual gestures (typing saat kerja, gesturing saat ngobrol).
+Fase 4: Polish & Atmosphere
+•  Post-processing (bloom, color grading, SSAO).
+•  Dynamic time of day (jendela menunjukkan langluar berubah sesuai waktu di UI 08:20 AM).
+•  Interactive props (klik komputer → zoom ke screen, klik elevator → animasi pintu buka).
+Fase 5: Multi-floor Expansion
+•  Elevator system dengan loading per lantai (mirip GTA 5 apartment).
+•  Floor 1: Engineering, Floor 2: Executive, Floor 3: Creative, dll.
+----
+7.  Tips Spesifik untuk Replit Agent
+8.  Prompt Engineering: Beri Replit Agent referensi gambar GTA 5 office interior dan spesifikasi Babylon.js. Contoh prompt: "Create a Babylon.js office scene with PBR materials, Havok physics, and NPC with Mixamo animations. Use modular environment kit."
+9.  Asset Pipeline: Gunakan glTF/GLB format (standard web 3D) untuk model dan animasi. Babylon.js native support GLB.
+10.  Performance Budget: Target <50 draw calls per ruangan, gunakan GPU Instancing untuk props berulang (kursi, meja, monitor).
+11.  Mobile Optimization: Karena ada virtual joystick (screenshot), pastikan Babylon.js menggunakan Universal Camera dengan touch controls native dan LOD (Level of Detail) untuk NPC.
+12.  Database: Gunakan Replit built-in database untuk menyimpan state NPC (posisi, mood, task history) agar persisten.citeweb_search:1#6
+----
+Kesimpulan
+Migrasi ke Babylon.js adalah keputusan terbaik untuk project ini di Replit. Kombinasi Babylon.js (engine) + Mixamo (animasi) + PBR materials (visual) + AI text-to-motion (NPC behavior) akan mengangkat DLavie OS dari blocky office menjadi immersive 3D AI office dengan kualitas mendekati GTA 5 interior, tanpa harus jadi open world.
+Jika butuh contoh code Babylon.js untuk office scene dengan NPC animation states, beri tahu saya dan saya bisa buatkan template dasarnya.
