@@ -1,43 +1,68 @@
-import { useState } from "react";
-import { AgentScene } from "@/components/3d/AgentScene";
+import { useState, useCallback } from "react";
+import { FloorScene } from "@/components/3d/FloorScene";
 import { AgentListHUD } from "@/components/hud/AgentListHUD";
 import { ActivityFeedHUD } from "@/components/hud/ActivityFeedHUD";
 import { SelectedAgentHUD } from "@/components/hud/SelectedAgentHUD";
+import { ChatOverlay } from "@/components/ui/ChatOverlay";
+import { ElevatorUI } from "@/components/ui/ElevatorUI";
+import { FloorIndicator } from "@/components/ui/FloorIndicator";
 import { ChevronLeft, ChevronRight, Users, Rss } from "lucide-react";
+import { useFloor } from "@/context/FloorContext";
+import type { NpcAgent } from "@/context/FloorContext";
+import type { Agent } from "@workspace/api-client-react";
+
+type ChatTarget = (Agent & { isNpc?: false }) | (NpcAgent & { isNpc: true }) | null;
 
 export default function Home() {
-  const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
-  const [leftOpen, setLeftOpen]   = useState(true);
+  const [selectedAgentId, setSelectedAgentId] = useState<number | string | null>(null);
+  const [chatTarget, setChatTarget] = useState<ChatTarget>(null);
+  const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
+  const { currentFloor } = useFloor();
+
+  const handleSelectAgent = useCallback((id: number | string) => {
+    setSelectedAgentId(id);
+  }, []);
+
+  const handleChatAgent = useCallback((agent: unknown) => {
+    setChatTarget(agent as ChatTarget);
+  }, []);
+
+  const handleCloseSelected = useCallback(() => {
+    setSelectedAgentId(null);
+  }, []);
 
   return (
     <div className="absolute inset-0 bg-background w-full h-full flex overflow-hidden">
       {/* ── 3D Scene fills entire space ── */}
       <div className="absolute inset-0 z-0">
-        <AgentScene onSelectAgent={setSelectedAgentId} selectedAgentId={selectedAgentId} />
+        <FloorScene
+          onSelectAgent={handleSelectAgent}
+          selectedAgentId={selectedAgentId}
+          onChatAgent={handleChatAgent}
+        />
       </div>
 
       {/* ── HUD overlay layer ── */}
       <div className="relative z-10 w-full h-full pointer-events-none flex flex-col">
         <div className="flex flex-1 overflow-hidden">
 
-          {/* ── Left panel (Agents) ── */}
+          {/* ── Left panel ── */}
           <div className="flex items-start pt-3 pl-3 gap-1.5 pointer-events-auto shrink-0">
-            {/* Panel */}
             <div
               className={`transition-all duration-300 ease-in-out overflow-hidden h-full ${leftOpen ? "w-64 opacity-100" : "w-0 opacity-0"}`}
               style={{ maxHeight: "calc(100vh - 120px)" }}
             >
               <div className="w-64 h-full">
-                <AgentListHUD onSelectAgent={setSelectedAgentId} selectedAgentId={selectedAgentId} />
+                <AgentListHUD
+                  onSelectAgent={(id) => { handleSelectAgent(id); }}
+                  selectedAgentId={typeof selectedAgentId === "number" ? selectedAgentId : null}
+                />
               </div>
             </div>
-
-            {/* Toggle button */}
             <button
-              onClick={() => setLeftOpen((v) => !v)}
+              onClick={() => setLeftOpen(v => !v)}
               className="mt-1 flex items-center justify-center w-7 h-8 rounded-lg bg-white/85 backdrop-blur-sm border border-gray-200 shadow-md hover:bg-white transition-colors"
-              title={leftOpen ? "Hide agents" : "Show agents"}
             >
               {leftOpen
                 ? <ChevronLeft className="w-3.5 h-3.5 text-gray-600" />
@@ -49,16 +74,19 @@ export default function Home() {
             </button>
           </div>
 
-          {/* ── Centre — pure 3D scene ── */}
-          <div className="flex-1" />
+          {/* ── Centre ── */}
+          <div className="flex-1 flex flex-col items-center justify-end pb-4 gap-2 pointer-events-none">
+            {/* Floor indicator + elevator button */}
+            <div className="pointer-events-auto">
+              <FloorIndicator />
+            </div>
+          </div>
 
-          {/* ── Right panel (Activity) ── */}
+          {/* ── Right panel ── */}
           <div className="flex items-start pt-3 pr-3 gap-1.5 pointer-events-auto shrink-0">
-            {/* Toggle button */}
             <button
-              onClick={() => setRightOpen((v) => !v)}
+              onClick={() => setRightOpen(v => !v)}
               className="mt-1 flex items-center justify-center w-7 h-8 rounded-lg bg-white/85 backdrop-blur-sm border border-gray-200 shadow-md hover:bg-white transition-colors"
-              title={rightOpen ? "Hide activity" : "Show activity"}
             >
               {rightOpen
                 ? <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
@@ -68,8 +96,6 @@ export default function Home() {
                   </div>
               }
             </button>
-
-            {/* Panel */}
             <div
               className={`transition-all duration-300 ease-in-out overflow-hidden h-full ${rightOpen ? "w-64 opacity-100" : "w-0 opacity-0"}`}
               style={{ maxHeight: "calc(100vh - 120px)" }}
@@ -81,16 +107,27 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── Selected agent panel (bottom centre) ── */}
-        {selectedAgentId && (
+        {/* ── Selected agent panel (bottom centre) — only floor 1 DB agents ── */}
+        {selectedAgentId && typeof selectedAgentId === "number" && currentFloor === 1 && (
           <div className="w-full flex justify-center pb-3 pointer-events-auto shrink-0">
             <SelectedAgentHUD
               agentId={selectedAgentId}
-              onClose={() => setSelectedAgentId(null)}
+              onClose={handleCloseSelected}
             />
           </div>
         )}
       </div>
+
+      {/* ── Chat overlay (AI conversation) ── */}
+      {chatTarget && (
+        <ChatOverlay
+          agent={chatTarget}
+          onClose={() => { setChatTarget(null); setSelectedAgentId(null); }}
+        />
+      )}
+
+      {/* ── Elevator UI ── */}
+      <ElevatorUI />
     </div>
   );
 }
