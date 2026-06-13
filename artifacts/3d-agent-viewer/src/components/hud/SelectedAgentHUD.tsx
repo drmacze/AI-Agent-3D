@@ -1,7 +1,6 @@
 import { useGetAgent, useGetAgentMessages, getGetAgentQueryKey, getGetAgentMessagesQueryKey } from "@workspace/api-client-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { X, MessageSquare, Briefcase, Hash, RadioReceiver } from "lucide-react";
+import { X, MessageSquare, Briefcase, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface SelectedAgentHUDProps {
@@ -9,33 +8,59 @@ interface SelectedAgentHUDProps {
   onClose: () => void;
 }
 
+const STATUS_STYLES: Record<string, string> = {
+  idle:      "bg-gray-100 text-gray-600",
+  working:   "bg-blue-100 text-blue-700",
+  chatting:  "bg-violet-100 text-violet-700",
+  moving:    "bg-amber-100 text-amber-700",
+  completed: "bg-green-100 text-green-700",
+};
+
+const MSG_TYPE_STYLES: Record<string, string> = {
+  chat:        "bg-blue-50 border-blue-100",
+  broadcast:   "bg-amber-50 border-amber-100",
+  task_update: "bg-green-50 border-green-100",
+  system:      "bg-gray-50 border-gray-100",
+};
+
 export function SelectedAgentHUD({ agentId, onClose }: SelectedAgentHUDProps) {
   const { data: agent } = useGetAgent(agentId, {
-    query: { enabled: !!agentId, queryKey: getGetAgentQueryKey(agentId) }
+    query: { enabled: !!agentId, queryKey: getGetAgentQueryKey(agentId) },
   });
 
   const { data: messages } = useGetAgentMessages(agentId, {
-    query: { enabled: !!agentId, refetchInterval: 3000, queryKey: getGetAgentMessagesQueryKey(agentId) }
+    query: { enabled: !!agentId, refetchInterval: 3000, queryKey: getGetAgentMessagesQueryKey(agentId) },
   });
 
   if (!agent) return null;
 
+  const statusStyle = STATUS_STYLES[agent.status] ?? STATUS_STYLES.idle;
+
   return (
-    <div className="w-[600px] bg-card/90 backdrop-blur-xl border border-primary/30 rounded-lg shadow-[0_0_30px_rgba(0,240,255,0.1)] overflow-hidden flex flex-col max-h-[300px]" data-testid="hud-selected-agent">
-      <div className="p-2.5 border-b border-primary/20 bg-background/60 flex justify-between items-center shrink-0">
+    <div
+      className="w-[620px] max-h-[300px] bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden flex flex-col"
+      data-testid="hud-selected-agent"
+    >
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between shrink-0 bg-gray-50">
         <div className="flex items-center gap-3">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: agent.color, boxShadow: `0 0 10px ${agent.color}` }} />
-          <h3 className="font-mono font-bold text-foreground text-sm">{agent.name}</h3>
-          <Badge variant="outline" className="font-mono text-[10px] h-5 bg-background/50">
-            {agent.role}
-          </Badge>
-          <Badge variant="outline" className="font-mono text-[10px] h-5 border-primary/50 text-primary">
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm"
+            style={{ backgroundColor: agent.color }}
+          >
+            {agent.name.charAt(0)}
+          </div>
+          <div>
+            <div className="font-semibold text-sm text-gray-900">{agent.name}</div>
+            <div className="text-xs text-gray-500">{agent.role}</div>
+          </div>
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ml-1 ${statusStyle}`}>
             {agent.status}
-          </Badge>
+          </span>
         </div>
-        <button 
+        <button
           onClick={onClose}
-          className="text-muted-foreground hover:text-foreground transition-colors p-1"
+          className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded hover:bg-gray-100"
           data-testid="btn-close-hud"
         >
           <X className="w-4 h-4" />
@@ -43,57 +68,61 @@ export function SelectedAgentHUD({ agentId, onClose }: SelectedAgentHUDProps) {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Stats Column */}
-        <div className="w-1/3 border-r border-border/50 p-3 bg-background/30 flex flex-col gap-3 shrink-0">
-          <div className="space-y-1">
-            <div className="text-[10px] text-muted-foreground font-mono flex items-center gap-1 uppercase">
+        {/* Stats */}
+        <div className="w-56 border-r border-gray-100 p-4 space-y-4 shrink-0 overflow-y-auto">
+          <div>
+            <div className="flex items-center gap-1.5 text-[10px] text-gray-400 uppercase font-semibold tracking-wide mb-1">
               <Briefcase className="w-3 h-3" /> Current Task
             </div>
-            <div className="text-xs font-mono text-primary truncate" title={agent.currentTask || "None"}>
-              {agent.currentTask || "None"}
-            </div>
-          </div>
-          
-          <div className="space-y-1">
-            <div className="text-[10px] text-muted-foreground font-mono flex items-center gap-1 uppercase">
-              <Hash className="w-3 h-3" /> Position
-            </div>
-            <div className="text-xs font-mono text-foreground">
-              X: {agent.positionX.toFixed(1)} | Z: {agent.positionZ.toFixed(1)}
-            </div>
+            <p className="text-xs text-gray-700 leading-snug">
+              {agent.currentTask ?? <span className="text-gray-400 italic">None</span>}
+            </p>
           </div>
 
-          <div className="space-y-1">
-            <div className="text-[10px] text-muted-foreground font-mono flex items-center gap-1 uppercase">
-              <RadioReceiver className="w-3 h-3" /> Comms Target
+          <div>
+            <div className="flex items-center gap-1.5 text-[10px] text-gray-400 uppercase font-semibold tracking-wide mb-1">
+              <CheckCircle2 className="w-3 h-3" /> Tasks Done
             </div>
-            <div className="text-xs font-mono text-foreground">
-              {agent.interactingWithId ? `Agent ID: ${agent.interactingWithId}` : "None"}
-            </div>
+            <p className="text-sm font-bold text-gray-800">{agent.completedTasks}</p>
           </div>
+
+          <div>
+            <div className="text-[10px] text-gray-400 uppercase font-semibold tracking-wide mb-1">Position</div>
+            <p className="text-xs text-gray-600 font-mono">
+              X: {agent.positionX.toFixed(1)}, Z: {agent.positionZ.toFixed(1)}
+            </p>
+          </div>
+
+          {agent.interactingWithId && (
+            <div>
+              <div className="text-[10px] text-gray-400 uppercase font-semibold tracking-wide mb-1">Talking with</div>
+              <p className="text-xs text-violet-700 font-medium">Agent #{agent.interactingWithId}</p>
+            </div>
+          )}
         </div>
 
-        {/* Messages Column */}
+        {/* Messages */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="px-3 py-1.5 bg-background/50 border-b border-border/30 shrink-0">
-            <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-1 uppercase">
-              <MessageSquare className="w-3 h-3" /> Comm Log
-            </span>
+          <div className="px-3 py-2 border-b border-gray-100 shrink-0">
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
+              <MessageSquare className="w-3.5 h-3.5" /> Messages
+            </div>
           </div>
-          <ScrollArea className="flex-1 p-2">
-            <div className="space-y-2 pr-2">
+          <ScrollArea className="flex-1">
+            <div className="p-2 space-y-1.5">
               {!messages?.length ? (
-                <div className="text-xs text-muted-foreground font-mono text-center py-4 opacity-50">
-                  No communications logged.
-                </div>
+                <p className="text-xs text-gray-400 text-center py-6">No messages yet</p>
               ) : (
-                messages.map(msg => (
-                  <div key={msg.id} className="text-xs font-mono bg-background/40 border border-border/30 rounded p-2">
-                    <div className="flex justify-between items-center mb-1 text-[10px] opacity-60">
-                      <span>{msg.type}</span>
-                      <span>{format(new Date(msg.timestamp), "HH:mm:ss")}</span>
+                messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`text-xs border rounded-lg p-2.5 ${MSG_TYPE_STYLES[msg.type] ?? "bg-gray-50 border-gray-100"}`}
+                  >
+                    <div className="flex justify-between items-center mb-1 text-[10px] text-gray-400">
+                      <span className="font-medium uppercase">{msg.type}</span>
+                      <span className="tabular-nums">{format(new Date(msg.timestamp), "HH:mm:ss")}</span>
                     </div>
-                    <div className="text-foreground break-words">{msg.content}</div>
+                    <p className="text-gray-700 leading-relaxed">{msg.content}</p>
                   </div>
                 ))
               )}

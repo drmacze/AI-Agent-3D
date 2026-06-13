@@ -1,69 +1,64 @@
 import { useGetActivityFeed, getGetActivityFeedQueryKey } from "@workspace/api-client-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Terminal, MessageSquare, PlayCircle, CheckCircle, Navigation, AlertCircle } from "lucide-react";
+import { MessageSquare, PlayCircle, CheckCircle2, Navigation, Radio, Rss } from "lucide-react";
 import { format } from "date-fns";
+
+const EVENT_CONFIG: Record<string, { icon: React.ReactNode; color: string; bg: string }> = {
+  task_started:  { icon: <PlayCircle className="w-3.5 h-3.5" />,  color: "text-blue-600",  bg: "bg-blue-50 border-blue-100"  },
+  task_completed:{ icon: <CheckCircle2 className="w-3.5 h-3.5" />,color: "text-green-600", bg: "bg-green-50 border-green-100" },
+  chat:          { icon: <MessageSquare className="w-3.5 h-3.5" />,color: "text-violet-600",bg: "bg-violet-50 border-violet-100"},
+  movement:      { icon: <Navigation className="w-3.5 h-3.5" />,  color: "text-amber-600", bg: "bg-amber-50 border-amber-100"  },
+  status_change: { icon: <Radio className="w-3.5 h-3.5" />,       color: "text-gray-600",  bg: "bg-gray-50 border-gray-100"   },
+  broadcast:     { icon: <Rss className="w-3.5 h-3.5" />,         color: "text-rose-600",  bg: "bg-rose-50 border-rose-100"   },
+};
 
 export function ActivityFeedHUD() {
   const { data: events } = useGetActivityFeed({
-    query: { refetchInterval: 3000, queryKey: getGetActivityFeedQueryKey() }
+    query: { refetchInterval: 3000, queryKey: getGetActivityFeedQueryKey() },
   });
 
-  const getEventIcon = (type: string) => {
-    switch (type) {
-      case 'task_started': return <PlayCircle className="w-3 h-3 text-primary" />;
-      case 'task_completed': return <CheckCircle className="w-3 h-3 text-green-400" />;
-      case 'chat': return <MessageSquare className="w-3 h-3 text-purple-400" />;
-      case 'movement': return <Navigation className="w-3 h-3 text-orange-400" />;
-      case 'status_change': return <AlertCircle className="w-3 h-3 text-blue-400" />;
-      default: return <Terminal className="w-3 h-3 text-muted-foreground" />;
-    }
-  };
-
-  const getEventColor = (type: string) => {
-    switch (type) {
-      case 'task_started': return 'text-primary/90';
-      case 'task_completed': return 'text-green-400/90';
-      case 'chat': return 'text-purple-400/90';
-      case 'movement': return 'text-orange-400/90';
-      case 'status_change': return 'text-blue-400/90';
-      default: return 'text-muted-foreground';
-    }
-  };
-
   return (
-    <div className="flex flex-col h-full bg-card/80 backdrop-blur-md border border-border rounded-lg shadow-xl overflow-hidden" data-testid="hud-activity-feed">
-      <div className="p-3 border-b border-border/50 bg-background/50 flex items-center justify-between">
-        <h2 className="font-mono font-bold text-sm text-primary flex items-center gap-2">
-          <Terminal className="w-4 h-4" />
-          SYSTEM LOG
-        </h2>
-        <span className="flex h-2 w-2 relative">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+    <div
+      className="flex flex-col h-full bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl shadow-lg overflow-hidden"
+      data-testid="hud-activity-feed"
+    >
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Rss className="w-4 h-4 text-primary" />
+          <h2 className="font-semibold text-sm text-gray-800">Activity</h2>
+        </div>
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
         </span>
       </div>
-      
-      <ScrollArea className="flex-1 p-3">
-        <div className="space-y-3">
+
+      <ScrollArea className="flex-1">
+        <div className="p-2 space-y-1.5">
           {!events?.length ? (
-            <div className="text-center py-8 text-xs text-muted-foreground font-mono">
-              Awaiting system events...
-            </div>
+            <div className="text-center py-8 text-sm text-gray-400">No recent activity</div>
           ) : (
-            events.map((event) => (
-              <div key={event.id} className="font-mono text-xs border-l-2 border-border/50 pl-2 py-0.5" data-testid={`event-${event.id}`}>
-                <div className="flex items-center justify-between mb-1 opacity-60">
-                  <span className="flex items-center gap-1.5">
-                    {getEventIcon(event.eventType)}
-                    <span>{event.agentName}</span>
-                  </span>
-                  <span>{format(new Date(event.timestamp), "HH:mm:ss")}</span>
+            events.map((event) => {
+              const cfg = EVENT_CONFIG[event.eventType] ?? EVENT_CONFIG.status_change;
+              return (
+                <div
+                  key={event.id}
+                  className={`p-2.5 rounded-lg border text-xs ${cfg.bg}`}
+                  data-testid={`event-${event.id}`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className={`flex items-center gap-1.5 font-medium ${cfg.color}`}>
+                      {cfg.icon}
+                      <span>{event.agentName}</span>
+                    </div>
+                    <span className="text-gray-400 tabular-nums">
+                      {format(new Date(event.timestamp), "HH:mm")}
+                    </span>
+                  </div>
+                  <p className="text-gray-700 leading-relaxed">{event.description}</p>
                 </div>
-                <div className={`leading-relaxed ${getEventColor(event.eventType)}`}>
-                  {event.description}
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </ScrollArea>

@@ -1,86 +1,104 @@
 import { useListAgents, getListAgentsQueryKey } from "@workspace/api-client-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity } from "lucide-react";
+import { Users } from "lucide-react";
 
 interface AgentListHUDProps {
   onSelectAgent: (id: number) => void;
   selectedAgentId: number | null;
 }
 
+const STATUS_CONFIG: Record<string, { dot: string; label: string; bg: string; text: string }> = {
+  idle:      { dot: "bg-gray-400",  label: "Idle",       bg: "bg-gray-100",   text: "text-gray-600"  },
+  working:   { dot: "bg-blue-500",  label: "Working",    bg: "bg-blue-50",    text: "text-blue-700"  },
+  chatting:  { dot: "bg-violet-500",label: "Chatting",   bg: "bg-violet-50",  text: "text-violet-700"},
+  moving:    { dot: "bg-amber-500", label: "Moving",     bg: "bg-amber-50",   text: "text-amber-700" },
+  completed: { dot: "bg-green-500", label: "Done",       bg: "bg-green-50",   text: "text-green-700" },
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  Researcher: "bg-indigo-100 text-indigo-700",
+  Planner:    "bg-sky-100 text-sky-700",
+  Coder:      "bg-emerald-100 text-emerald-700",
+  Reviewer:   "bg-orange-100 text-orange-700",
+};
+
 export function AgentListHUD({ onSelectAgent, selectedAgentId }: AgentListHUDProps) {
   const { data: agents, isLoading } = useListAgents({
-    query: { refetchInterval: 3000, queryKey: getListAgentsQueryKey() }
+    query: { refetchInterval: 3000, queryKey: getListAgentsQueryKey() },
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'idle': return 'bg-muted text-muted-foreground border-muted';
-      case 'working': return 'bg-primary/20 text-primary border-primary/50';
-      case 'chatting': return 'bg-purple-500/20 text-purple-400 border-purple-500/50';
-      case 'moving': return 'bg-orange-500/20 text-orange-400 border-orange-500/50';
-      case 'completed': return 'bg-green-500/20 text-green-400 border-green-500/50';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
-
   return (
-    <div className="flex flex-col h-full bg-card/80 backdrop-blur-md border border-border rounded-lg shadow-xl overflow-hidden" data-testid="hud-agent-list">
-      <div className="p-3 border-b border-border/50 bg-background/50">
-        <h2 className="font-mono font-bold text-sm text-primary flex items-center gap-2">
-          <Activity className="w-4 h-4" />
-          ACTIVE AGENTS
-        </h2>
+    <div
+      className="flex flex-col h-full bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl shadow-lg overflow-hidden"
+      data-testid="hud-agent-list"
+    >
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+        <Users className="w-4 h-4 text-primary" />
+        <h2 className="font-semibold text-sm text-gray-800">Agents</h2>
+        {agents && (
+          <span className="ml-auto text-xs text-gray-400 font-medium">{agents.length} total</span>
+        )}
       </div>
-      
-      <ScrollArea className="flex-1 p-2">
-        <div className="space-y-2">
-          {isLoading ? (
-            Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="p-3 rounded-md border border-border/30 bg-background/30">
-                <div className="flex justify-between mb-2">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-12" />
-                </div>
-                <Skeleton className="h-3 w-full" />
-              </div>
-            ))
-          ) : !agents?.length ? (
-            <div className="text-center py-8 text-sm text-muted-foreground font-mono">
-              No agents online
-            </div>
-          ) : (
-            agents.map(agent => (
-              <button
-                key={agent.id}
-                onClick={() => onSelectAgent(agent.id)}
-                className={`w-full text-left p-3 rounded-md border transition-all ${
-                  selectedAgentId === agent.id 
-                    ? 'border-primary bg-primary/10 shadow-[0_0_15px_rgba(0,240,255,0.15)]' 
-                    : 'border-border/50 bg-background/50 hover:border-primary/50 hover:bg-background/80'
-                }`}
-                data-testid={`btn-select-agent-${agent.id}`}
-              >
-                <div className="flex justify-between items-center mb-1.5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: agent.color, boxShadow: `0 0 5px ${agent.color}` }} />
-                    <span className="font-mono font-bold text-sm text-foreground">{agent.name}</span>
+
+      <ScrollArea className="flex-1">
+        <div className="p-2 space-y-1.5">
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-3 rounded-lg border border-gray-100 bg-gray-50">
+                  <div className="flex justify-between mb-2">
+                    <Skeleton className="h-3.5 w-20" />
+                    <Skeleton className="h-3.5 w-14" />
                   </div>
-                  <Badge variant="outline" className={`font-mono text-[10px] uppercase px-1.5 py-0 ${getStatusColor(agent.status)}`}>
-                    {agent.status}
-                  </Badge>
+                  <Skeleton className="h-3 w-full" />
                 </div>
-                
-                <div className="text-xs text-muted-foreground flex justify-between">
-                  <span className="font-mono opacity-70">{agent.role}</span>
-                  <span className="font-mono truncate max-w-[120px] ml-2 text-primary/70" title={agent.currentTask || "Idle"}>
-                    {agent.currentTask || "Idle"}
-                  </span>
-                </div>
-              </button>
-            ))
-          )}
+              ))
+            : !agents?.length
+            ? (
+                <div className="text-center py-8 text-sm text-gray-400">No agents online</div>
+              )
+            : agents.map((agent) => {
+                const st = STATUS_CONFIG[agent.status] ?? STATUS_CONFIG.idle;
+                const roleClass = ROLE_COLORS[agent.role] ?? "bg-gray-100 text-gray-700";
+                const isSelected = selectedAgentId === agent.id;
+
+                return (
+                  <button
+                    key={agent.id}
+                    onClick={() => onSelectAgent(agent.id)}
+                    className={`w-full text-left p-3 rounded-lg border transition-all duration-150 ${
+                      isSelected
+                        ? "border-primary bg-blue-50 ring-1 ring-primary/30"
+                        : "border-gray-100 bg-white hover:bg-gray-50 hover:border-gray-200"
+                    }`}
+                    data-testid={`btn-select-agent-${agent.id}`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-flex h-2 w-2 rounded-full ${st.dot} ${
+                            agent.status === "working" ? "animate-pulse" : ""
+                          }`}
+                        />
+                        <span className="font-semibold text-sm text-gray-900">{agent.name}</span>
+                      </div>
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${roleClass}`}>
+                        {agent.role}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${st.bg} ${st.text}`}>
+                        {st.label}
+                      </span>
+                      {agent.currentTask && (
+                        <span className="text-[11px] text-gray-500 truncate max-w-[130px] ml-2" title={agent.currentTask}>
+                          {agent.currentTask}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
         </div>
       </ScrollArea>
     </div>
