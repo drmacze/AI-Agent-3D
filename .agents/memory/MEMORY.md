@@ -3,3 +3,4 @@
 - [Audio system](audio-system.md) — procedural Web Audio API singleton at src/lib/audioManager.ts; no CDN, all sounds generated in-browser via oscillators + noise buffers.
 - [Graphics settings in R3F](graphics-settings.md) — dpr is dynamic via Canvas prop; shadows/antialias require remount to fully apply; bloom is conditional render so instant.
 - [R3F graphics bugs fixed](r3f-graphics-bugs.md) — bufferAttribute args syntax, Bloom levels prop, world-space fullscreen overlays, floor z-fighting patterns.
+- [Kimi AI asset integration](kimi-assets.md) — PBR upgrade: meshPhysicalMaterial + smoothNoise GLSL in OfficeFloor; NpcAvatar uses same; Kimi ZIP at /tmp/kimi_assets but don't re-extract.
