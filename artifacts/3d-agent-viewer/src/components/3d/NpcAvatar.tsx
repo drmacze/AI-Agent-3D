@@ -265,9 +265,9 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
       onClick={e => { e.stopPropagation(); onClick?.(); }}>
 
       {/* Shadow */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.007, 0]} scale={[1, 0.72, 1]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]} scale={[1, 0.72, 1]}>
         <circleGeometry args={[0.23, 14]} />
-        <meshLambertMaterial color="#806040" transparent opacity={0.26} />
+        <meshLambertMaterial color="#806040" transparent opacity={0.22} depthWrite={false} />
       </mesh>
 
       {/* Shoes */}

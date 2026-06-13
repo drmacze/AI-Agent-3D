@@ -146,7 +146,7 @@ function DataParticles({ accent }: { accent: string }) {
   return (
     <points ref={ref}>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+        <bufferAttribute attach="attributes-position" array={positions} count={count} itemSize={3} />
       </bufferGeometry>
       <pointsMaterial color={accent} size={0.04} transparent opacity={0.55} sizeAttenuation />
     </points>
@@ -289,9 +289,9 @@ function FloorProps({ floorId }: { floorId: FloorId }) {
       ))}
 
       {/* Floor accent */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
         <planeGeometry args={[28, 20]} />
-        <meshLambertMaterial color={theme.accent} transparent opacity={0.03} />
+        <meshLambertMaterial color={theme.accent} transparent opacity={0.03} depthWrite={false} />
       </mesh>
 
       {/* Ceiling LED strips */}
@@ -439,22 +439,6 @@ function useNpcSimulation(npcs: NpcAgent[]) {
   return positions.current;
 }
 
-// ── Riding elevator overlay ───────────────────────────────────────────────────
-function ElevatorRideEffect() {
-  const ref = useRef<THREE.Mesh>(null);
-  useFrame((state) => {
-    if (!ref.current) return;
-    const mat = ref.current.material as THREE.MeshBasicMaterial;
-    mat.opacity = 0.6 + Math.sin(state.clock.elapsedTime * 8) * 0.25;
-  });
-  return (
-    <mesh ref={ref} position={[0, 2, 0]} rotation={[0, 0, 0]}>
-      <planeGeometry args={[40, 40]} />
-      <meshBasicMaterial color="#000000" transparent opacity={0.7} depthTest={false} />
-    </mesh>
-  );
-}
-
 // ── Main FloorScene ───────────────────────────────────────────────────────────
 interface Props {
   onSelectAgent: (id: number | string) => void;
@@ -473,7 +457,7 @@ function checkWebGL() {
 export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNearNpc }: Props) {
   const webGLAvailable = useMemo(() => checkWebGL(), []);
   const gameState = useGameStore(s => s.gameState);
-  const { currentFloor, getNpcsByFloor, isRiding } = useFloor();
+  const { currentFloor, getNpcsByFloor } = useFloor();
   const { settings } = useSettings();
 
   const joystickMove = useRef({ x: 0, y: 0 });
@@ -597,8 +581,6 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
               );
             })}
 
-            {/* Elevator transition effect */}
-            {isRiding && <ElevatorRideEffect />}
           </Suspense>
         </Canvas>
       </WebGLErrorBoundary>

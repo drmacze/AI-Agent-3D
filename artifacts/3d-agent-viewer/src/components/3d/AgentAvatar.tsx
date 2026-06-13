@@ -209,9 +209,9 @@ export function AgentAvatar({ agent, isSelected, onClick }: Props) {
       onClick={(e) => { e.stopPropagation(); onClick(); }}
     >
       {/* ── Blob shadow ── */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.008, 0]} scale={[1, 0.72, 1]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]} scale={[1, 0.72, 1]}>
         <circleGeometry args={[0.24, 14]} />
-        <meshLambertMaterial color="#a09888" transparent opacity={0.32} />
+        <meshLambertMaterial color="#a09888" transparent opacity={0.28} depthWrite={false} />
       </mesh>
 
       {/* ── SHOES ── */}

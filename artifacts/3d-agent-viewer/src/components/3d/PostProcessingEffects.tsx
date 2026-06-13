@@ -5,10 +5,9 @@ export function PostProcessingEffects() {
   return (
     <EffectComposer multisampling={0}>
       <Bloom
-        luminanceThreshold={0.22}
+        luminanceThreshold={0.25}
         luminanceSmoothing={0.9}
-        intensity={0.85}
-        levels={6}
+        intensity={0.75}
         mipmapBlur
       />
       <Vignette
