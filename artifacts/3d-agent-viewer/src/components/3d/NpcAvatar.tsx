@@ -91,67 +91,38 @@ export function NpcAvatar({ agent, isSelected = false, onClick }: Props) {
 
   const bubble = useGameStore(state => state.npcBubbles[agent.id] ?? null);
 
-  const liveStatus  = useRef<LiveStatus>(agent.status);
-  const statusTimer = useRef(seed % 15 + 8);
+  const liveStatus  = useRef<LiveStatus>("working");
+  const statusTimer = useRef(35 + Math.random() * 20);
 
   useFrame((state, delta) => {
     if (!groupRef.current) return;
     const t = state.clock.elapsedTime + seed * 0.37;
 
-    // Status evolution
+    // Status evolution — 72% time at desk working
     statusTimer.current -= delta;
     if (statusTimer.current <= 0) {
       const roll = Math.random();
       const wasStatus = liveStatus.current;
-      const w = seed % 5;
-      if (w === 0) {
-        if (roll < 0.42)      liveStatus.current = "working";
-        else if (roll < 0.54) liveStatus.current = "phone";
-        else if (roll < 0.64) liveStatus.current = "chatting";
-        else if (roll < 0.74) liveStatus.current = "coffee";
-        else if (roll < 0.84) liveStatus.current = "idle";
-        else if (roll < 0.92) liveStatus.current = "stretch";
-        else                  liveStatus.current = "presenting";
-      } else if (w === 1) {
-        if (roll < 0.38)      liveStatus.current = "working";
-        else if (roll < 0.55) liveStatus.current = "chatting";
-        else if (roll < 0.67) liveStatus.current = "coffee";
-        else if (roll < 0.77) liveStatus.current = "idle";
-        else if (roll < 0.86) liveStatus.current = "presenting";
-        else if (roll < 0.93) liveStatus.current = "phone";
-        else                  liveStatus.current = "stretch";
-      } else if (w === 2) {
-        if (roll < 0.28)      liveStatus.current = "working";
-        else if (roll < 0.48) liveStatus.current = "chatting";
-        else if (roll < 0.60) liveStatus.current = "presenting";
-        else if (roll < 0.70) liveStatus.current = "coffee";
-        else if (roll < 0.80) liveStatus.current = "idle";
-        else if (roll < 0.89) liveStatus.current = "phone";
-        else                  liveStatus.current = "stretch";
-      } else if (w === 3) {
-        if (roll < 0.46)      liveStatus.current = "working";
-        else if (roll < 0.59) liveStatus.current = "stretch";
-        else if (roll < 0.69) liveStatus.current = "phone";
-        else if (roll < 0.79) liveStatus.current = "idle";
-        else if (roll < 0.88) liveStatus.current = "chatting";
-        else if (roll < 0.94) liveStatus.current = "coffee";
-        else                  liveStatus.current = "presenting";
+      if (roll < 0.72) {
+        liveStatus.current = "working";
+      } else if (roll < 0.79) {
+        liveStatus.current = "coffee";
+      } else if (roll < 0.86) {
+        liveStatus.current = "chatting";
+      } else if (roll < 0.91) {
+        liveStatus.current = "phone";
+      } else if (roll < 0.95) {
+        liveStatus.current = "stretch";
+      } else if (roll < 0.98) {
+        liveStatus.current = "idle";
       } else {
-        if (roll < 0.25)      liveStatus.current = "working";
-        else if (roll < 0.42) liveStatus.current = "coffee";
-        else if (roll < 0.58) liveStatus.current = "chatting";
-        else if (roll < 0.70) liveStatus.current = "presenting";
-        else if (roll < 0.80) liveStatus.current = "phone";
-        else if (roll < 0.90) liveStatus.current = "idle";
-        else                  liveStatus.current = "stretch";
+        liveStatus.current = "presenting";
       }
-      // Working: long desk time. Other activities: shorter.
       if (liveStatus.current === "working") {
-        statusTimer.current = 22 + Math.random() * 28; // 22–50s at desk
+        statusTimer.current = 35 + Math.random() * 25; // 35-60s at desk
       } else {
-        statusTimer.current = 6 + Math.random() * 10;  // 6–16s for breaks
+        statusTimer.current = 5 + Math.random() * 8;   // 5-13s for breaks
       }
-
       const newStatus = liveStatus.current;
       if (newStatus === "working") {
         targetPos.current.set(homeX, 0, homeZ);

@@ -15,6 +15,7 @@ import { ElevatorCab3D } from "./ElevatorCab3D";
 import { LobbyCamera } from "./LobbyCamera";
 import { CityExterior } from "./CityExterior";
 import { DeveloperRoom } from "./DeveloperRoom";
+import { OfficeFloor } from "./OfficeFloor";
 import { NpcConversations } from "./NpcConversations";
 import { PostProcessingEffects } from "./PostProcessingEffects";
 import { TouchControls } from "@/components/ui/TouchControls";
