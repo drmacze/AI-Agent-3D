@@ -55,11 +55,11 @@ const DESK_STATIONS = [
 ];
 
 // ── Dynamic lights ────────────────────────────────────────────────────────────
-function DynamicLights({ floorId, isLow }: { floorId: FloorId; isLow: boolean }) {
-  const ambRef  = useRef<THREE.AmbientLight>(null);
-  const sunRef  = useRef<THREE.DirectionalLight>(null);
-  const fillRef = useRef<THREE.DirectionalLight>(null);
-  const floorRef = useRef<THREE.PointLight>(null);
+function DynamicLights({ floorId, isLow, isMobile }: { floorId: FloorId; isLow: boolean; isMobile: boolean }) {
+  const ambRef   = useRef<THREE.AmbientLight>(null);
+  const sunRef   = useRef<THREE.DirectionalLight>(null);
+  const fillRef  = useRef<THREE.DirectionalLight>(null);
+  const accentRef = useRef<THREE.PointLight>(null);
   const { lightConfig } = useGameTime();
   const theme = FLOOR_THEMES[floorId];
 
@@ -77,19 +77,28 @@ function DynamicLights({ floorId, isLow }: { floorId: FloorId; isLow: boolean })
     sunRef.current.intensity = THREE.MathUtils.lerp(sunRef.current.intensity, lightConfig.sunIntensity, sp);
     fillRef.current.color.lerp(tf, sp);
     fillRef.current.intensity = THREE.MathUtils.lerp(fillRef.current.intensity, lightConfig.fillIntensity, sp);
-    if (!isLow && floorRef.current) {
-      floorRef.current.intensity = 0.4 + Math.sin(Date.now() * 0.001) * 0.1;
+    // Subtle pulsing accent light — mobile gets 1 light, high/ultra gets 5
+    if ((isMobile || !isLow) && accentRef.current) {
+      accentRef.current.intensity = 0.35 + Math.sin(Date.now() * 0.0008) * 0.08;
     }
   });
 
   return (
     <>
+      {/* Base lights — always present */}
       <ambientLight ref={ambRef} color={lightConfig.ambientColor} intensity={lightConfig.ambientIntensity} />
-      <directionalLight ref={sunRef} color={lightConfig.sunColor} intensity={lightConfig.sunIntensity} position={[14, 10, 2]} />
+      <directionalLight ref={sunRef} color={lightConfig.sunColor} intensity={lightConfig.sunIntensity} position={[14, 10, 2]} castShadow={false} />
       <directionalLight ref={fillRef} color={lightConfig.fillColor} intensity={lightConfig.fillIntensity} position={[0, 8, 0]} />
-      {!isLow && (
+
+      {/* Mobile quality — 1 accent pointlight for color/depth */}
+      {isMobile && (
+        <pointLight ref={accentRef} color={theme.accent} intensity={0.35} distance={14} position={[0, 3.5, 0]} />
+      )}
+
+      {/* High/Ultra quality — full lighting rig */}
+      {!isLow && !isMobile && (
         <>
-          <pointLight ref={floorRef} color={theme.accent} intensity={0.4} distance={10} position={[-10.5, 2.5, -7.5]} />
+          <pointLight ref={accentRef} color={theme.accent} intensity={0.4} distance={10} position={[-10.5, 2.5, -7.5]} />
           <pointLight color={theme.accent} intensity={0.3} distance={8} position={[9.5, 2, -7.5]} />
           <directionalLight color="#d8eeff" intensity={0.25} position={[13, 3, 0]} />
           <pointLight color="#fffbf0" intensity={0.38} distance={14} position={[-4, 3.8, 0]} />
@@ -144,24 +153,23 @@ function AnimatedMonitor({ pos, accent }: { pos: [number,number,number]; accent:
 }
 
 // ── Floating data particles ───────────────────────────────────────────────────
-function DataParticles({ accent }: { accent: string }) {
+function DataParticles({ accent, particleCount = 60 }: { accent: string; particleCount?: number }) {
   const ref = useRef<THREE.Points>(null);
-  const count = 60;
   const positions = useMemo(() => {
-    const pos = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
+    const pos = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
       pos[i * 3]     = (Math.random() - 0.5) * 24;
       pos[i * 3 + 1] = Math.random() * 3.5;
       pos[i * 3 + 2] = (Math.random() - 0.5) * 18;
     }
     return pos;
-  }, []);
-  const speeds = useMemo(() => Array.from({ length: count }, () => 0.2 + Math.random() * 0.5), []);
+  }, [particleCount]);
+  const speeds = useMemo(() => Array.from({ length: particleCount }, () => 0.2 + Math.random() * 0.5), [particleCount]);
 
   useFrame((state) => {
     if (!ref.current) return;
     const pos = ref.current.geometry.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < particleCount; i++) {
       pos.array[i * 3 + 1] = (pos.array[i * 3 + 1] + speeds[i] * 0.01) % 4;
       (pos.array as Float32Array)[i * 3] += Math.sin(state.clock.elapsedTime * 0.3 + i * 0.7) * 0.003;
     }
@@ -171,23 +179,41 @@ function DataParticles({ accent }: { accent: string }) {
   return (
     <points ref={ref}>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" array={positions} count={count} itemSize={3} />
+        <bufferAttribute attach="attributes-position" array={positions} count={particleCount} itemSize={3} />
       </bufferGeometry>
-      <pointsMaterial color={accent} size={0.04} transparent opacity={0.55} sizeAttenuation />
+      <pointsMaterial color={accent} size={0.05} transparent opacity={0.6} sizeAttenuation />
     </points>
   );
 }
 
 // ── Reflective floor ──────────────────────────────────────────────────────────
-function ReflectiveFloor({ floorId, isLow }: { floorId: FloorId; isLow: boolean }) {
+function ReflectiveFloor({ floorId: _floorId, isLow, isMobile }: { floorId: FloorId; isLow: boolean; isMobile: boolean }) {
   if (isLow) {
+    // Flat but decent color — polished concrete look
     return (
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[28, 20]} />
-        <meshLambertMaterial color="#c8c4bc" />
+        <meshLambertMaterial color="#c4c0ba" />
       </mesh>
     );
   }
+
+  if (isMobile) {
+    // PBR material — looks great, zero reflection pass cost
+    return (
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <planeGeometry args={[28, 20]} />
+        <meshStandardMaterial
+          color="#c8c4bc"
+          roughness={0.72}
+          metalness={0.12}
+          envMapIntensity={0.4}
+        />
+      </mesh>
+    );
+  }
+
+  // High/Ultra — full reflector
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
       <planeGeometry args={[28, 20]} />
@@ -284,7 +310,7 @@ function CoffeeStation({ accent }: { accent: string }) {
 }
 
 // ── Floor-specific office props ───────────────────────────────────────────────
-function FloorProps({ floorId, isLow }: { floorId: FloorId; isLow: boolean }) {
+function FloorProps({ floorId, isLow, isMobile }: { floorId: FloorId; isLow: boolean; isMobile: boolean }) {
   const theme = FLOOR_THEMES[floorId];
 
   return (
@@ -456,8 +482,8 @@ function FloorProps({ floorId, isLow }: { floorId: FloorId; isLow: boolean }) {
       {/* Whiteboard */}
       <AnimatedWhiteboard accent={theme.accent} />
 
-      {/* Data particles — skip on low quality */}
-      {!isLow && <DataParticles accent={theme.accent} />}
+      {/* Data particles — skip on low, reduced on mobile */}
+      {!isLow && <DataParticles accent={theme.accent} particleCount={isMobile ? 25 : 60} />}
     </group>
   );
 }
@@ -517,8 +543,13 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
   const gameState = useGameStore(s => s.gameState);
   const { currentFloor, getNpcsByFloor } = useFloor();
   const { settings } = useSettings();
-  const isLow = settings.graphicsQuality === 'low';
+  const quality = settings.graphicsQuality;
+  const isLow    = quality === 'low';
+  const isMobile = quality === 'mobile';
   const frameloop = settings.fpsLimit > 0 ? 'demand' as const : 'always' as const;
+  // DPR: mobile uses pixelRatio setting directly; low caps at 0.75; high/ultra free
+  const dprMin = isLow ? 0.5 : isMobile ? settings.pixelRatio : 0.75;
+  const dprMax = isLow ? 0.75 : isMobile ? settings.pixelRatio : Math.min(settings.pixelRatio, 1.5);
 
   const joystickMove = useRef({ x: 0, y: 0 });
   const joystickLook = useRef({ x: 0, y: 0 });
@@ -568,20 +599,20 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
       <WebGLErrorBoundary>
         <Canvas
           camera={{ fov: 70 }}
-          dpr={[Math.min(settings.pixelRatio, 0.75), Math.min(settings.pixelRatio, 1.5)]}
+          dpr={[dprMin, dprMax]}
           performance={{ min: 0.4 }}
           frameloop={frameloop}
           gl={{
             antialias: settings.antialias,
             toneMapping: THREE.ACESFilmicToneMapping,
-            toneMappingExposure: 0.88,
+            toneMappingExposure: isMobile ? 0.95 : 0.88,
             powerPreference: 'high-performance',
           }}
           shadows={settings.shadowsEnabled}
         >
           {settings.fpsLimit > 0 && <FrameLimiter fps={settings.fpsLimit} />}
           <SceneBackground />
-          <DynamicLights floorId={currentFloor} isLow={isLow} />
+          <DynamicLights floorId={currentFloor} isLow={isLow} isMobile={isMobile} />
 
           {/* Camera control — lobby = cinematic orbit, playing = first-person */}
           {gameState === 'lobby'   && <LobbyCamera />}
@@ -596,19 +627,19 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
             />
           )}
 
-          {/* Post-processing: bloom + vignette + per-floor color grading + chat DoF */}
-          {settings.bloomEnabled && (
+          {/* Post-processing: color grading always on medium+, bloom only on high/ultra */}
+          {quality !== 'low' && (
             <PostProcessingEffects
               chatMode={selectedAgentId !== null}
               floorId={currentFloor}
-              quality={settings.graphicsQuality}
+              quality={quality}
             />
           )}
 
           <Suspense fallback={null}>
-            <ReflectiveFloor floorId={currentFloor} isLow={isLow} />
+            <ReflectiveFloor floorId={currentFloor} isLow={isLow} isMobile={isMobile} />
             <ElevatorCab3D />
-            <FloorProps floorId={currentFloor} isLow={isLow} />
+            <FloorProps floorId={currentFloor} isLow={isLow} isMobile={isMobile} />
 
             {/* City exterior visible through windows */}
             <CityExterior />

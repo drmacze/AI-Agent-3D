@@ -2,8 +2,8 @@ import { createContext, useContext, useState, useCallback, useEffect, type React
 import { audioManager } from "@/lib/audioManager";
 
 export type ApiProvider = "builtin" | "openclaw" | "openai" | "anthropic" | "groq" | "kimi";
-export type GraphicsQuality = "low" | "medium" | "high" | "ultra";
-export type FpsLimit = 30 | 60 | 120 | 0;
+export type GraphicsQuality = "low" | "mobile" | "medium" | "high" | "ultra";
+export type FpsLimit = 30 | 45 | 60 | 120 | 0;
 
 export interface Settings {
   apiKey: string;
@@ -58,21 +58,22 @@ const DEFAULT: Settings = {
   masterVolume: 0.7,
   musicVolume: 0.45,
   sfxVolume: 0.8,
-  graphicsQuality: isMobileDevice ? "low" : "high",
-  fpsLimit: isMobileDevice ? 30 : 0,
+  graphicsQuality: isMobileDevice ? "mobile" : "high",
+  fpsLimit: isMobileDevice ? 45 : 0,
   shadowsEnabled: false,
   antialias: !isMobileDevice,
   showFPS: false,
-  pixelRatio: isMobileDevice ? 0.5 : 1,
+  pixelRatio: isMobileDevice ? 0.85 : 1,
   bloomEnabled: !isMobileDevice,
   fogEnabled: true,
 };
 
 const QUALITY_PRESETS: Record<GraphicsQuality, Partial<Settings>> = {
-  low:    { shadowsEnabled: false, antialias: false, pixelRatio: 0.5, bloomEnabled: false, fogEnabled: false },
-  medium: { shadowsEnabled: false, antialias: false, pixelRatio: 0.75, bloomEnabled: false, fogEnabled: true  },
-  high:   { shadowsEnabled: false, antialias: true,  pixelRatio: 1,    bloomEnabled: true,  fogEnabled: true  },
-  ultra:  { shadowsEnabled: true,  antialias: true,  pixelRatio: 1.5,  bloomEnabled: true,  fogEnabled: true  },
+  low:    { shadowsEnabled: false, antialias: false, pixelRatio: 0.5,  bloomEnabled: false, fogEnabled: false, fpsLimit: 30 },
+  mobile: { shadowsEnabled: false, antialias: false, pixelRatio: 0.85, bloomEnabled: false, fogEnabled: true,  fpsLimit: 45 },
+  medium: { shadowsEnabled: false, antialias: false, pixelRatio: 0.75, bloomEnabled: false, fogEnabled: true,  fpsLimit: 60 },
+  high:   { shadowsEnabled: false, antialias: true,  pixelRatio: 1,    bloomEnabled: true,  fogEnabled: true,  fpsLimit: 0  },
+  ultra:  { shadowsEnabled: true,  antialias: true,  pixelRatio: 1.5,  bloomEnabled: true,  fogEnabled: true,  fpsLimit: 0  },
 };
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
@@ -82,9 +83,14 @@ function loadSettings(): Settings {
     const raw = localStorage.getItem("dlavie_settings");
     if (raw) {
       const saved = JSON.parse(raw) as Partial<Settings>;
-      // Migrate old localhost OpenClaw URLs to the public default
       if (saved.openclawGatewayUrl && /localhost|127\.0\.0\.1/.test(saved.openclawGatewayUrl)) {
         saved.openclawGatewayUrl = DEFAULT.openclawGatewayUrl;
+      }
+      // Migrate old "low" mobile setting to new "mobile" tier
+      if (saved.graphicsQuality === "low" && isMobileDevice) {
+        saved.graphicsQuality = "mobile";
+        saved.pixelRatio = 0.85;
+        saved.fpsLimit = 45;
       }
       return { ...DEFAULT, ...saved };
     }
