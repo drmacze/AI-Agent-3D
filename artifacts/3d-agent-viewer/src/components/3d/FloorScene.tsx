@@ -1,5 +1,5 @@
 import { Suspense, useMemo, useRef, useCallback, Component, ReactNode, useState, useEffect } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { MeshReflectorMaterial } from "@react-three/drei";
 import * as THREE from "three";
 import { useListAgents, getListAgentsQueryKey } from "@workspace/api-client-react";
@@ -55,7 +55,7 @@ const DESK_STATIONS = [
 ];
 
 // ── Dynamic lights ────────────────────────────────────────────────────────────
-function DynamicLights({ floorId }: { floorId: FloorId }) {
+function DynamicLights({ floorId, isLow }: { floorId: FloorId; isLow: boolean }) {
   const ambRef  = useRef<THREE.AmbientLight>(null);
   const sunRef  = useRef<THREE.DirectionalLight>(null);
   const fillRef = useRef<THREE.DirectionalLight>(null);
@@ -77,8 +77,7 @@ function DynamicLights({ floorId }: { floorId: FloorId }) {
     sunRef.current.intensity = THREE.MathUtils.lerp(sunRef.current.intensity, lightConfig.sunIntensity, sp);
     fillRef.current.color.lerp(tf, sp);
     fillRef.current.intensity = THREE.MathUtils.lerp(fillRef.current.intensity, lightConfig.fillIntensity, sp);
-    // Floor accent light pulse
-    if (floorRef.current) {
+    if (!isLow && floorRef.current) {
       floorRef.current.intensity = 0.4 + Math.sin(Date.now() * 0.001) * 0.1;
     }
   });
@@ -88,12 +87,15 @@ function DynamicLights({ floorId }: { floorId: FloorId }) {
       <ambientLight ref={ambRef} color={lightConfig.ambientColor} intensity={lightConfig.ambientIntensity} />
       <directionalLight ref={sunRef} color={lightConfig.sunColor} intensity={lightConfig.sunIntensity} position={[14, 10, 2]} />
       <directionalLight ref={fillRef} color={lightConfig.fillColor} intensity={lightConfig.fillIntensity} position={[0, 8, 0]} />
-      <pointLight ref={floorRef} color={theme.accent} intensity={0.4} distance={10} position={[-10.5, 2.5, -7.5]} />
-      <pointLight color={theme.accent} intensity={0.3} distance={8} position={[9.5, 2, -7.5]} />
-      <directionalLight color="#d8eeff" intensity={0.25} position={[13, 3, 0]} />
-      {/* Ceiling LED strips */}
-      <pointLight color="#fffbf0" intensity={0.38} distance={14} position={[-4, 3.8, 0]} />
-      <pointLight color="#fffbf0" intensity={0.38} distance={14} position={[ 4, 3.8, 0]} />
+      {!isLow && (
+        <>
+          <pointLight ref={floorRef} color={theme.accent} intensity={0.4} distance={10} position={[-10.5, 2.5, -7.5]} />
+          <pointLight color={theme.accent} intensity={0.3} distance={8} position={[9.5, 2, -7.5]} />
+          <directionalLight color="#d8eeff" intensity={0.25} position={[13, 3, 0]} />
+          <pointLight color="#fffbf0" intensity={0.38} distance={14} position={[-4, 3.8, 0]} />
+          <pointLight color="#fffbf0" intensity={0.38} distance={14} position={[ 4, 3.8, 0]} />
+        </>
+      )}
     </>
   );
 }
@@ -101,6 +103,17 @@ function DynamicLights({ floorId }: { floorId: FloorId }) {
 function SceneBackground() {
   const { lightConfig } = useGameTime();
   return <color attach="background" args={[lightConfig.bgColor]} />;
+}
+
+// ── FPS limiter — skips render frames to hit a target cap ───────────────────
+function FrameLimiter({ fps }: { fps: number }) {
+  const { invalidate } = useThree();
+  useEffect(() => {
+    if (fps === 0) return;
+    const id = setInterval(() => invalidate(), 1000 / fps);
+    return () => clearInterval(id);
+  }, [fps, invalidate]);
+  return null;
 }
 
 // ── Animated monitor screens ──────────────────────────────────────────────────
@@ -166,8 +179,15 @@ function DataParticles({ accent }: { accent: string }) {
 }
 
 // ── Reflective floor ──────────────────────────────────────────────────────────
-function ReflectiveFloor({ floorId }: { floorId: FloorId }) {
-  const theme = FLOOR_THEMES[floorId];
+function ReflectiveFloor({ floorId, isLow }: { floorId: FloorId; isLow: boolean }) {
+  if (isLow) {
+    return (
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <planeGeometry args={[28, 20]} />
+        <meshLambertMaterial color="#c8c4bc" />
+      </mesh>
+    );
+  }
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
       <planeGeometry args={[28, 20]} />
@@ -264,7 +284,7 @@ function CoffeeStation({ accent }: { accent: string }) {
 }
 
 // ── Floor-specific office props ───────────────────────────────────────────────
-function FloorProps({ floorId }: { floorId: FloorId }) {
+function FloorProps({ floorId, isLow }: { floorId: FloorId; isLow: boolean }) {
   const theme = FLOOR_THEMES[floorId];
 
   return (
@@ -436,8 +456,8 @@ function FloorProps({ floorId }: { floorId: FloorId }) {
       {/* Whiteboard */}
       <AnimatedWhiteboard accent={theme.accent} />
 
-      {/* Data particles */}
-      <DataParticles accent={theme.accent} />
+      {/* Data particles — skip on low quality */}
+      {!isLow && <DataParticles accent={theme.accent} />}
     </group>
   );
 }
@@ -497,6 +517,8 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
   const gameState = useGameStore(s => s.gameState);
   const { currentFloor, getNpcsByFloor } = useFloor();
   const { settings } = useSettings();
+  const isLow = settings.graphicsQuality === 'low';
+  const frameloop = settings.fpsLimit > 0 ? 'demand' as const : 'always' as const;
 
   const joystickMove = useRef({ x: 0, y: 0 });
   const joystickLook = useRef({ x: 0, y: 0 });
@@ -546,8 +568,9 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
       <WebGLErrorBoundary>
         <Canvas
           camera={{ fov: 70 }}
-          dpr={[1, Math.min(settings.pixelRatio, 1.5)]}
-          performance={{ min: 0.5 }}
+          dpr={[Math.min(settings.pixelRatio, 0.75), Math.min(settings.pixelRatio, 1.5)]}
+          performance={{ min: 0.4 }}
+          frameloop={frameloop}
           gl={{
             antialias: settings.antialias,
             toneMapping: THREE.ACESFilmicToneMapping,
@@ -556,8 +579,9 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
           }}
           shadows={settings.shadowsEnabled}
         >
+          {settings.fpsLimit > 0 && <FrameLimiter fps={settings.fpsLimit} />}
           <SceneBackground />
-          <DynamicLights floorId={currentFloor} />
+          <DynamicLights floorId={currentFloor} isLow={isLow} />
 
           {/* Camera control — lobby = cinematic orbit, playing = first-person */}
           {gameState === 'lobby'   && <LobbyCamera />}
@@ -577,13 +601,14 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
             <PostProcessingEffects
               chatMode={selectedAgentId !== null}
               floorId={currentFloor}
+              quality={settings.graphicsQuality}
             />
           )}
 
           <Suspense fallback={null}>
-            <ReflectiveFloor floorId={currentFloor} />
+            <ReflectiveFloor floorId={currentFloor} isLow={isLow} />
             <ElevatorCab3D />
-            <FloorProps floorId={currentFloor} />
+            <FloorProps floorId={currentFloor} isLow={isLow} />
 
             {/* City exterior visible through windows */}
             <CityExterior />

@@ -37,6 +37,14 @@ interface SettingsContextType {
   hasApiKey: boolean;
 }
 
+function detectMobile(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /android|iphone|ipad|ipod|mobile|tablet/i.test(navigator.userAgent) ||
+    ("ontouchstart" in window && window.innerWidth < 1024);
+}
+
+const isMobileDevice = detectMobile();
+
 const DEFAULT: Settings = {
   apiKey: "",
   apiProvider: "builtin",
@@ -50,13 +58,13 @@ const DEFAULT: Settings = {
   masterVolume: 0.7,
   musicVolume: 0.45,
   sfxVolume: 0.8,
-  graphicsQuality: "high",
-  fpsLimit: 0,
+  graphicsQuality: isMobileDevice ? "low" : "high",
+  fpsLimit: isMobileDevice ? 30 : 0,
   shadowsEnabled: false,
-  antialias: true,
+  antialias: !isMobileDevice,
   showFPS: false,
-  pixelRatio: 1,
-  bloomEnabled: true,
+  pixelRatio: isMobileDevice ? 0.5 : 1,
+  bloomEnabled: !isMobileDevice,
   fogEnabled: true,
 };
 
