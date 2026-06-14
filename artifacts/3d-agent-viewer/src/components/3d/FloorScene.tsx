@@ -1,6 +1,7 @@
 import { Suspense, useMemo, useRef, useCallback, Component, ReactNode, useState, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { MeshReflectorMaterial } from "@react-three/drei";
+import { MeshReflectorMaterial, ContactShadows } from "@react-three/drei";
+import { getWoodLightTexture, getWoodDarkTexture } from "@/lib/proceduralTextures";
 import * as THREE from "three";
 import { useListAgents, getListAgentsQueryKey } from "@workspace/api-client-react";
 import { AgentAvatar } from "./AgentAvatar";
@@ -312,11 +313,13 @@ function CoffeeStation({ accent }: { accent: string }) {
 // ── Floor-specific office props ───────────────────────────────────────────────
 function FloorProps({ floorId, isLow, isMobile }: { floorId: FloorId; isLow: boolean; isMobile: boolean }) {
   const theme = FLOOR_THEMES[floorId];
+  const woodTex  = useMemo(() => getWoodLightTexture(), []);
+  const darkTex  = useMemo(() => getWoodDarkTexture(),  []);
 
   return (
     <group>
       {/* ── Modular architecture ── */}
-      <CeilingSystem floorId={floorId} />
+      <CeilingSystem floorId={floorId} isLow={isLow} isMobile={isMobile} />
       <WallSystem floorId={floorId} />
       <PerFloorZone floorId={floorId} />
 
@@ -346,16 +349,16 @@ function FloorProps({ floorId, isLow, isMobile }: { floorId: FloorId; isLow: boo
         const backZ = cz + 0.21;
         return (
           <group key={i}>
-            {/* Desk top */}
+            {/* Desk top — wood grain texture */}
             <mesh position={[dx, 0.74, dz]} castShadow receiveShadow>
-              <boxGeometry args={[1.4, 0.07, 0.78]} /><meshStandardMaterial color="#c8a870" roughness={0.55} metalness={0.0} />
+              <boxGeometry args={[1.4, 0.07, 0.78]} /><meshStandardMaterial map={woodTex} roughness={0.48} metalness={0.02} />
             </mesh>
             {/* Desk side panels */}
             <mesh position={[dx - 0.68, 0.38, dz]}>
-              <boxGeometry args={[0.04, 0.76, 0.74]} /><meshStandardMaterial color="#b89860" roughness={0.58} metalness={0.0} />
+              <boxGeometry args={[0.04, 0.76, 0.74]} /><meshStandardMaterial map={darkTex} roughness={0.55} metalness={0.0} />
             </mesh>
             <mesh position={[dx + 0.68, 0.38, dz]}>
-              <boxGeometry args={[0.04, 0.76, 0.74]} /><meshStandardMaterial color="#b89860" roughness={0.58} metalness={0.0} />
+              <boxGeometry args={[0.04, 0.76, 0.74]} /><meshStandardMaterial map={darkTex} roughness={0.55} metalness={0.0} />
             </mesh>
             {/* Monitor stand neck */}
             <mesh position={[dx, 0.84, monZ]}>
@@ -433,10 +436,10 @@ function FloorProps({ floorId, isLow, isMobile }: { floorId: FloorId; isLow: boo
         );
       })}
 
-      {/* Meeting table */}
+      {/* Meeting table — wood texture */}
       <group position={[7, 0, 1]}>
-        <mesh position={[0, 0.74, 0]} castShadow receiveShadow><boxGeometry args={[2.8, 0.08, 1.4]} /><meshStandardMaterial color="#c8a870" roughness={0.50} metalness={0.0} /></mesh>
-        <mesh position={[0, 0.78, 0]}><boxGeometry args={[2.9, 0.04, 1.5]} /><meshStandardMaterial color="#a88050" roughness={0.45} metalness={0.04} /></mesh>
+        <mesh position={[0, 0.74, 0]} castShadow receiveShadow><boxGeometry args={[2.8, 0.08, 1.4]} /><meshStandardMaterial map={woodTex} roughness={0.45} metalness={0.02} /></mesh>
+        <mesh position={[0, 0.78, 0]}><boxGeometry args={[2.9, 0.04, 1.5]} /><meshStandardMaterial map={darkTex} roughness={0.42} metalness={0.04} /></mesh>
         {[[-1.25,-0.55],[1.25,-0.55],[-1.25,0.55],[1.25,0.55]].map(([lx,lz], i) => (
           <mesh key={i} position={[lx, 0.35, lz] as [number,number,number]}>
             <boxGeometry args={[0.07,0.7,0.07]} /><meshStandardMaterial color="#906838" roughness={0.52} metalness={0.04} />
@@ -638,6 +641,18 @@ export function FloorScene({ onSelectAgent, selectedAgentId, onChatAgent, onNear
 
           <Suspense fallback={null}>
             <ReflectiveFloor floorId={currentFloor} isLow={isLow} isMobile={isMobile} />
+            {/* Contact shadows under all scene objects — cheap baked render */}
+            {!isLow && (
+              <ContactShadows
+                position={[0, 0.005, 0]}
+                scale={32}
+                blur={2.5}
+                far={4.5}
+                opacity={isMobile ? 0.32 : 0.50}
+                resolution={isMobile ? 256 : 512}
+                color="#181828"
+              />
+            )}
             <ElevatorCab3D />
             <FloorProps floorId={currentFloor} isLow={isLow} isMobile={isMobile} />
 

@@ -3,7 +3,8 @@ import * as THREE from "three"
 import { FLOOR_THEMES, type FloorId } from "@/context/FloorContext"
 
 // ── Ceiling System ─────────────────────────────────────────────────────────────
-export function CeilingSystem({ floorId }: { floorId: FloorId }) {
+interface CeilingProps { floorId: FloorId; isLow?: boolean; isMobile?: boolean }
+export function CeilingSystem({ floorId, isLow = false, isMobile = false }: CeilingProps) {
   const theme = FLOOR_THEMES[floorId]
 
   const hLines = useMemo(() => {
@@ -21,6 +22,11 @@ export function CeilingSystem({ floorId }: { floorId: FloorId }) {
     [-7,  -4.5], [-2, -4.5], [3,  -4.5],
     [-7,   4.5], [-2,  4.5], [3,   4.5],
   ]
+
+  // 3 strategic ceiling lights — cover the main work areas without all 6
+  const tubeLights: [number, number, number][] = isLow ? [] : isMobile
+    ? [[0, 3.4, 0]]
+    : [[-4.5, 3.5, -4.5], [0.5, 3.5, 0], [3, 3.5, 4.5]]
 
   return (
     <group>
@@ -45,7 +51,7 @@ export function CeilingSystem({ floorId }: { floorId: FloorId }) {
         </mesh>
       ))}
 
-      {/* Recessed light panels */}
+      {/* Recessed light panels — brighter emissive = visible tube light look */}
       {lightPanels.map(([x, z], i) => (
         <group key={`lp${i}`} position={[x, 3.972, z]}>
           {/* Panel frame */}
@@ -53,16 +59,25 @@ export function CeilingSystem({ floorId }: { floorId: FloorId }) {
             <boxGeometry args={[1.8, 0.035, 0.55]} />
             <meshStandardMaterial color="#d8d5cf" roughness={0.82} metalness={0.06} />
           </mesh>
-          {/* Emissive tube surface */}
+          {/* Emissive tube surface — high intensity for visible glow */}
           <mesh position={[0, -0.013, 0]}>
             <boxGeometry args={[1.68, 0.006, 0.45]} />
             <meshStandardMaterial
               color="#ffffff"
-              emissive="#fffef6"
-              emissiveIntensity={1.1}
+              emissive="#fffef0"
+              emissiveIntensity={2.2}
               roughness={1}
               metalness={0}
             />
+          </mesh>
+          {/* Second inner tube for depth */}
+          <mesh position={[0.4, -0.015, 0]}>
+            <boxGeometry args={[0.55, 0.004, 0.38]} />
+            <meshStandardMaterial color="#fffff8" emissive="#fffff0" emissiveIntensity={1.6} roughness={1} metalness={0} />
+          </mesh>
+          <mesh position={[-0.4, -0.015, 0]}>
+            <boxGeometry args={[0.55, 0.004, 0.38]} />
+            <meshStandardMaterial color="#fffff8" emissive="#fffff0" emissiveIntensity={1.6} roughness={1} metalness={0} />
           </mesh>
           {/* Accent trim strip */}
           <mesh position={[0, -0.016, 0.24]}>
@@ -70,11 +85,23 @@ export function CeilingSystem({ floorId }: { floorId: FloorId }) {
             <meshStandardMaterial
               color={theme.accent}
               emissive={theme.accent}
-              emissiveIntensity={0.5}
+              emissiveIntensity={0.8}
               roughness={0.3}
             />
           </mesh>
         </group>
+      ))}
+
+      {/* Actual point lights at strategic positions — illuminate the floor below */}
+      {tubeLights.map(([x, y, z], i) => (
+        <pointLight
+          key={`tl${i}`}
+          position={[x, y, z]}
+          color="#fffef0"
+          intensity={isMobile ? 1.2 : 1.8}
+          distance={isMobile ? 10 : 12}
+          decay={1.5}
+        />
       ))}
     </group>
   )

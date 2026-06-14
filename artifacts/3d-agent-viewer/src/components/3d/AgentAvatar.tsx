@@ -191,189 +191,220 @@ export function AgentAvatar({ agent, isSelected, onClick }: Props) {
 
       <mesh position={[-0.09, 0.065, 0.1]}>
         <boxGeometry args={[0.12, 0.065, 0.24]} />
-        <meshStandardMaterial color={shoeColor} roughness={0.55} metalness={0.12} />
+        <meshPhysicalMaterial color={shoeColor} roughness={0.38} metalness={0.18} clearcoat={0.4} clearcoatRoughness={0.3} />
       </mesh>
       <mesh position={[0.09, 0.065, 0.1]}>
         <boxGeometry args={[0.12, 0.065, 0.24]} />
-        <meshStandardMaterial color={shoeColor} roughness={0.55} metalness={0.12} />
+        <meshPhysicalMaterial color={shoeColor} roughness={0.38} metalness={0.18} clearcoat={0.4} clearcoatRoughness={0.3} />
       </mesh>
 
       <group ref={leftLegRef} position={[-0.1, 0.1, 0]}>
         <mesh position={[0, 0.26, 0]}>
           <boxGeometry args={[0.13, 0.52, 0.14]} />
-          <meshStandardMaterial color={pantsColor} roughness={0.90} metalness={0.0} />
+          <meshPhysicalMaterial color={pantsColor} roughness={0.88} metalness={0.0} />
         </mesh>
       </group>
       <group ref={rightLegRef} position={[0.1, 0.1, 0]}>
         <mesh position={[0, 0.26, 0]}>
           <boxGeometry args={[0.13, 0.52, 0.14]} />
-          <meshStandardMaterial color={pantsColor} roughness={0.90} metalness={0.0} />
+          <meshPhysicalMaterial color={pantsColor} roughness={0.88} metalness={0.0} />
         </mesh>
       </group>
 
+      {/* Belt */}
       <mesh position={[0, 0.64, 0]}>
         <boxGeometry args={[0.36, 0.045, 0.21]} />
-        <meshStandardMaterial color="#1a1208" roughness={0.65} metalness={0.15} />
+        <meshPhysicalMaterial color="#1a1208" roughness={0.55} metalness={0.2} />
       </mesh>
+      {/* Belt buckle */}
       <mesh position={[0, 0.645, 0.107]}>
         <boxGeometry args={[0.06, 0.035, 0.01]} />
-        <meshStandardMaterial color="#c8a840" roughness={0.18} metalness={0.88} />
+        <meshPhysicalMaterial color="#c8a840" roughness={0.12} metalness={0.92} />
       </mesh>
 
       <mesh ref={bodyRef} position={[0, 0.93, 0]}>
         <boxGeometry args={[0.36, 0.52, 0.21]} />
-        <meshStandardMaterial color={shirtColor} roughness={0.85} metalness={0.0} />
+        <meshPhysicalMaterial color={shirtColor} roughness={0.82} metalness={0.0} />
       </mesh>
 
+      {/* White collar */}
       <mesh position={[0, 1.2, 0.1]}>
         <boxGeometry args={[0.14, 0.1, 0.04]} />
-        <meshStandardMaterial color="#f5f0ea" roughness={0.90} metalness={0.0} />
+        <meshPhysicalMaterial color="#f5f0ea" roughness={0.90} metalness={0.0} />
       </mesh>
+      {/* Tie */}
       <mesh position={[0, 1.08, 0.107]}>
         <boxGeometry args={[0.04, 0.28, 0.01]} />
-        <meshStandardMaterial color={tieColor} roughness={0.55} metalness={0.05} />
+        <meshPhysicalMaterial color={tieColor} roughness={0.45} metalness={0.05} sheen={0.3} sheenColor={tieColor} />
       </mesh>
       <mesh position={[0, 1.2, 0.108]}>
         <boxGeometry args={[0.05, 0.045, 0.015]} />
-        <meshStandardMaterial color={tieColor} roughness={0.55} metalness={0.05} />
+        <meshPhysicalMaterial color={tieColor} roughness={0.45} metalness={0.05} />
       </mesh>
 
+      {/* Shirt buttons */}
       {[1.05, 0.93, 0.81].map((y, i) => (
         <mesh key={i} position={[0, y, 0.107]}>
           <boxGeometry args={[0.018, 0.018, 0.01]} />
-          <meshStandardMaterial color="#e8e4de" />
+          <meshPhysicalMaterial color="#e8e4de" roughness={0.3} metalness={0.2} />
         </mesh>
       ))}
 
+      {/* Shoulders */}
       <mesh position={[-0.22, 1.17, 0]}>
-        <sphereGeometry args={[0.065, 6, 5]} />
-        <meshStandardMaterial color={shirtColor} />
+        <sphereGeometry args={[0.065, 7, 6]} />
+        <meshPhysicalMaterial color={shirtColor} roughness={0.82} metalness={0.0} />
       </mesh>
       <mesh position={[0.22, 1.17, 0]}>
-        <sphereGeometry args={[0.065, 6, 5]} />
-        <meshStandardMaterial color={shirtColor} />
+        <sphereGeometry args={[0.065, 7, 6]} />
+        <meshPhysicalMaterial color={shirtColor} roughness={0.82} metalness={0.0} />
       </mesh>
 
       <group ref={leftArmRef} position={[-0.22, 1.17, 0]}>
         <mesh position={[0, -0.21, 0]}>
           <boxGeometry args={[0.11, 0.42, 0.12]} />
-          <meshStandardMaterial color={shirtColor} />
+          <meshPhysicalMaterial color={shirtColor} roughness={0.82} metalness={0.0} />
         </mesh>
+        {/* Shirt cuff */}
         <mesh position={[0, -0.44, 0]}>
           <boxGeometry args={[0.115, 0.055, 0.125]} />
-          <meshStandardMaterial color="#f0ece6" />
+          <meshPhysicalMaterial color="#f0ece6" roughness={0.88} metalness={0.0} />
         </mesh>
+        {/* Hand */}
         <mesh position={[0, -0.55, 0.01]}>
           <boxGeometry args={[0.095, 0.11, 0.095]} />
-          <meshStandardMaterial color={skinColor} />
+          <meshPhysicalMaterial color={skinColor} roughness={0.68} metalness={0.0} />
         </mesh>
       </group>
 
       <group ref={rightArmRef} position={[0.22, 1.17, 0]}>
         <mesh position={[0, -0.21, 0]}>
           <boxGeometry args={[0.11, 0.42, 0.12]} />
-          <meshStandardMaterial color={shirtColor} />
+          <meshPhysicalMaterial color={shirtColor} roughness={0.82} metalness={0.0} />
         </mesh>
         <mesh position={[0, -0.44, 0]}>
           <boxGeometry args={[0.115, 0.055, 0.125]} />
-          <meshStandardMaterial color="#f0ece6" />
+          <meshPhysicalMaterial color="#f0ece6" roughness={0.88} metalness={0.0} />
         </mesh>
         <mesh position={[0, -0.55, 0.01]}>
           <boxGeometry args={[0.095, 0.11, 0.095]} />
-          <meshStandardMaterial color={skinColor} />
+          <meshPhysicalMaterial color={skinColor} roughness={0.68} metalness={0.0} />
         </mesh>
       </group>
 
+      {/* Neck */}
       <mesh position={[0, 1.26, 0]}>
         <cylinderGeometry args={[0.063, 0.07, 0.1, 8]} />
-        <meshStandardMaterial color={skinColor} />
+        <meshPhysicalMaterial color={skinColor} roughness={0.68} metalness={0.0} />
       </mesh>
 
       <group ref={headGroup} position={[0, 1.45, 0]}>
+        {/* Face */}
         <mesh>
           <boxGeometry args={[0.27, 0.3, 0.25]} />
-          <meshStandardMaterial color={skinColor} />
+          <meshPhysicalMaterial color={skinColor} roughness={0.68} metalness={0.0} />
         </mesh>
 
+        {/* Hair top */}
         <mesh position={[0, 0.17, -0.01]}>
           <boxGeometry args={[0.275, 0.1, 0.26]} />
-          <meshStandardMaterial color={hairColor} />
+          <meshPhysicalMaterial color={hairColor} roughness={0.92} metalness={0.0} />
         </mesh>
+        {/* Hair sides */}
         <mesh position={[-0.135, 0.09, 0]}>
           <boxGeometry args={[0.02, 0.22, 0.25]} />
-          <meshStandardMaterial color={hairColor} />
+          <meshPhysicalMaterial color={hairColor} roughness={0.92} metalness={0.0} />
         </mesh>
         <mesh position={[0.135, 0.09, 0]}>
           <boxGeometry args={[0.02, 0.22, 0.25]} />
-          <meshStandardMaterial color={hairColor} />
+          <meshPhysicalMaterial color={hairColor} roughness={0.92} metalness={0.0} />
         </mesh>
+        {/* Hair back */}
         <mesh position={[0, 0.06, -0.13]}>
           <boxGeometry args={[0.26, 0.2, 0.02]} />
-          <meshStandardMaterial color={hairColor} />
+          <meshPhysicalMaterial color={hairColor} roughness={0.92} metalness={0.0} />
         </mesh>
 
+        {/* Eyebrows */}
         <mesh position={[-0.075, 0.09, 0.128]}>
           <boxGeometry args={[0.07, 0.018, 0.01]} />
-          <meshStandardMaterial color={hairColor} />
+          <meshPhysicalMaterial color={hairColor} roughness={0.90} metalness={0.0} />
         </mesh>
         <mesh position={[0.075, 0.09, 0.128]}>
           <boxGeometry args={[0.07, 0.018, 0.01]} />
-          <meshStandardMaterial color={hairColor} />
+          <meshPhysicalMaterial color={hairColor} roughness={0.90} metalness={0.0} />
         </mesh>
 
+        {/* Eye whites */}
         <mesh position={[-0.075, 0.04, 0.127]}>
           <boxGeometry args={[0.065, 0.04, 0.01]} />
-          <meshStandardMaterial color="#f0ede8" />
+          <meshPhysicalMaterial color="#f0ede8" roughness={0.45} metalness={0.0} />
         </mesh>
         <mesh position={[0.075, 0.04, 0.127]}>
           <boxGeometry args={[0.065, 0.04, 0.01]} />
-          <meshStandardMaterial color="#f0ede8" />
+          <meshPhysicalMaterial color="#f0ede8" roughness={0.45} metalness={0.0} />
         </mesh>
 
+        {/* Iris */}
         <mesh position={[-0.075, 0.04, 0.131]}>
           <boxGeometry args={[0.036, 0.036, 0.01]} />
-          <meshStandardMaterial color="#1e3a5a" />
+          <meshPhysicalMaterial color="#1e3a5a" roughness={0.15} metalness={0.0} />
         </mesh>
         <mesh position={[0.075, 0.04, 0.131]}>
           <boxGeometry args={[0.036, 0.036, 0.01]} />
-          <meshStandardMaterial color="#1e3a5a" />
+          <meshPhysicalMaterial color="#1e3a5a" roughness={0.15} metalness={0.0} />
         </mesh>
 
+        {/* Pupils */}
         <mesh position={[-0.075, 0.04, 0.134]}>
           <boxGeometry args={[0.018, 0.018, 0.005]} />
-          <meshStandardMaterial color="#0a0a0a" />
+          <meshPhysicalMaterial color="#060606" roughness={0.05} metalness={0.0} />
         </mesh>
         <mesh position={[0.075, 0.04, 0.134]}>
           <boxGeometry args={[0.018, 0.018, 0.005]} />
-          <meshStandardMaterial color="#0a0a0a" />
+          <meshPhysicalMaterial color="#060606" roughness={0.05} metalness={0.0} />
         </mesh>
 
+        {/* Eye shine highlights */}
+        <mesh position={[-0.068, 0.048, 0.136]}>
+          <boxGeometry args={[0.007, 0.007, 0.002]} />
+          <meshPhysicalMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.6} roughness={0.0} metalness={0.0} />
+        </mesh>
+        <mesh position={[0.082, 0.048, 0.136]}>
+          <boxGeometry args={[0.007, 0.007, 0.002]} />
+          <meshPhysicalMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.6} roughness={0.0} metalness={0.0} />
+        </mesh>
+
+        {/* Eyelids (blinking) */}
         <mesh ref={leftEyeLidRef}  position={[-0.075, 0.04, 0.136]}>
           <boxGeometry args={[0.067, 0.042, 0.004]} />
-          <meshStandardMaterial color={skinColor} />
+          <meshPhysicalMaterial color={skinColor} roughness={0.68} metalness={0.0} />
         </mesh>
         <mesh ref={rightEyeLidRef} position={[0.075, 0.04, 0.136]}>
           <boxGeometry args={[0.067, 0.042, 0.004]} />
-          <meshStandardMaterial color={skinColor} />
+          <meshPhysicalMaterial color={skinColor} roughness={0.68} metalness={0.0} />
         </mesh>
 
+        {/* Ears */}
         <mesh position={[-0.137, 0.02, 0]}>
           <boxGeometry args={[0.02, 0.055, 0.05]} />
-          <meshStandardMaterial color={skinColor} />
+          <meshPhysicalMaterial color={skinColor} roughness={0.68} metalness={0.0} />
         </mesh>
         <mesh position={[0.137, 0.02, 0]}>
           <boxGeometry args={[0.02, 0.055, 0.05]} />
-          <meshStandardMaterial color={skinColor} />
+          <meshPhysicalMaterial color={skinColor} roughness={0.68} metalness={0.0} />
         </mesh>
 
+        {/* Nose */}
         <mesh position={[0, -0.02, 0.132]}>
           <boxGeometry args={[0.025, 0.028, 0.022]} />
-          <meshStandardMaterial color={skinColor} />
+          <meshPhysicalMaterial color={skinColor} roughness={0.68} metalness={0.0} />
         </mesh>
 
+        {/* Mouth */}
         <mesh position={[0, -0.085, 0.129]}>
           <boxGeometry args={[0.065, 0.016, 0.008]} />
-          <meshStandardMaterial color={agent.status === "chatting" ? "#a03020" : "#8a5048"} />
+          <meshPhysicalMaterial color={agent.status === "chatting" ? "#a03020" : "#8a5048"} roughness={0.55} metalness={0.0} />
         </mesh>
 
         <Html position={[0, 0.46, 0]} center zIndexRange={[100, 0]} className="pointer-events-none select-none">
