@@ -61,11 +61,14 @@ export function AgentAvatar({ agent, isSelected, onClick }: Props) {
 
   const targetPos  = useMemo(() => new THREE.Vector3(agent.positionX, 0, agent.positionZ), [agent.positionX, agent.positionZ]);
   const currentPos = useRef(new THREE.Vector3(agent.positionX, 0, agent.positionZ));
-  const walkPhase   = useRef(Math.random() * Math.PI * 2);
-  const typingPhase = useRef(Math.random() * Math.PI * 2);
-  const blinkTimer  = useRef(Math.random() * 4);
-  const blinkOpen   = useRef(true);
-  const idlePhase   = useRef(Math.random() * Math.PI * 2);
+  const walkPhase    = useRef(Math.random() * Math.PI * 2);
+  const typingPhase  = useRef(Math.random() * Math.PI * 2);
+  const breathPhase  = useRef(Math.random() * Math.PI * 2);
+  const blinkTimer   = useRef(Math.random() * 4);
+  const blinkOpen    = useRef(true);
+  const idlePhase    = useRef(Math.random() * Math.PI * 2);
+  const glanceTimer  = useRef(3 + Math.random() * 6);
+  const glanceTgt    = useRef(0);
   const stretchPhase = useRef(0);
   const seatProgress = useRef(0);
 
@@ -112,67 +115,97 @@ export function AgentAvatar({ agent, isSelected, onClick }: Props) {
     if (leftEyeLidRef.current)  leftEyeLidRef.current.scale.y  = THREE.MathUtils.lerp(leftEyeLidRef.current.scale.y,  blinkScale, delta * 20);
     if (rightEyeLidRef.current) rightEyeLidRef.current.scale.y = THREE.MathUtils.lerp(rightEyeLidRef.current.scale.y, blinkScale, delta * 20);
 
+    // ── Universal breathing ───────────────────────────────────────────────────
+    breathPhase.current += delta * (isStretching ? 1.3 : 0.85);
+    const breathe = Math.sin(breathPhase.current) * 0.013;
+
     if (isMoving) {
+      // ── WALK — hip sway + shoulder roll + head bob ─────────────────────
       walkPhase.current += delta * 8.5;
-      const swing = Math.sin(walkPhase.current) * 0.38;
-      const bodyBob = Math.abs(Math.sin(walkPhase.current)) * 0.045;
-      if (leftLegRef.current)  leftLegRef.current.rotation.x  = THREE.MathUtils.lerp(leftLegRef.current.rotation.x,  swing, delta * 12);
-      if (rightLegRef.current) rightLegRef.current.rotation.x = THREE.MathUtils.lerp(rightLegRef.current.rotation.x, -swing, delta * 12);
-      if (leftArmRef.current)  { leftArmRef.current.rotation.x  = -swing * 0.55; leftArmRef.current.rotation.z  = 0.08; }
-      if (rightArmRef.current) { rightArmRef.current.rotation.x =  swing * 0.55; rightArmRef.current.rotation.z = -0.08; }
-      if (bodyRef.current) { bodyRef.current.rotation.z = Math.sin(walkPhase.current) * 0.025; bodyRef.current.rotation.x = 0; }
-      if (headGroup.current) headGroup.current.rotation.y = Math.sin(walkPhase.current * 0.5) * 0.06;
-      groupRef.current.position.y = bodyBob;
+      const swing   = Math.sin(walkPhase.current) * 0.42;
+      const hipSway = Math.sin(walkPhase.current) * 0.055;
+      const hipBob  = Math.abs(Math.sin(walkPhase.current)) * 0.048;
+      const headBob = Math.sin(walkPhase.current * 2) * 0.008;
+
+      if (leftLegRef.current)  leftLegRef.current.rotation.x  = THREE.MathUtils.lerp(leftLegRef.current.rotation.x,  swing, delta * 14);
+      if (rightLegRef.current) rightLegRef.current.rotation.x = THREE.MathUtils.lerp(rightLegRef.current.rotation.x, -swing, delta * 14);
+      if (leftArmRef.current)  { leftArmRef.current.rotation.x  = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, -swing * 0.58, delta * 10); leftArmRef.current.rotation.z  = THREE.MathUtils.lerp(leftArmRef.current.rotation.z, 0.07 + hipSway * 0.4, delta * 8); }
+      if (rightArmRef.current) { rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, swing * 0.58, delta * 10); rightArmRef.current.rotation.z = THREE.MathUtils.lerp(rightArmRef.current.rotation.z, -0.07 - hipSway * 0.4, delta * 8); }
+      if (bodyRef.current)     { bodyRef.current.rotation.z = THREE.MathUtils.lerp(bodyRef.current.rotation.z, hipSway * 0.7, delta * 8); bodyRef.current.rotation.x = THREE.MathUtils.lerp(bodyRef.current.rotation.x, 0.048, delta * 6); bodyRef.current.scale.y = 1 + breathe; }
+      if (headGroup.current)   { headGroup.current.rotation.y = THREE.MathUtils.lerp(headGroup.current.rotation.y, -hipSway * 0.5 + Math.sin(walkPhase.current * 0.5) * 0.04, delta * 6); headGroup.current.rotation.x = THREE.MathUtils.lerp(headGroup.current.rotation.x, headBob + 0.01, delta * 8); }
+      groupRef.current.position.y = hipBob;
 
     } else if (status === "working") {
       if (isStretching) {
+        // ── STRETCH — full arm raise, body arch, neck roll ─────────────
         stretchPhase.current += delta * 1.5;
+        const sc = Math.sin(t * 0.42 + agent.id * 0.3);
         const up = Math.min(Math.sin(stretchPhase.current) * 0.8 + 0.8, 1.6) * 0.7;
-        if (leftArmRef.current)  { leftArmRef.current.rotation.x  = -up; leftArmRef.current.rotation.z  = -0.3 * up; }
-        if (rightArmRef.current) { rightArmRef.current.rotation.x = -up; rightArmRef.current.rotation.z  =  0.3 * up; }
-        if (bodyRef.current) bodyRef.current.rotation.x = -0.06 * up;
+        if (leftArmRef.current)  { leftArmRef.current.rotation.x  = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, -up, delta * 5); leftArmRef.current.rotation.z  = THREE.MathUtils.lerp(leftArmRef.current.rotation.z, -0.30 * up + sc * 0.06, delta * 4); }
+        if (rightArmRef.current) { rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, -up, delta * 5); rightArmRef.current.rotation.z = THREE.MathUtils.lerp(rightArmRef.current.rotation.z, 0.30 * up - sc * 0.06, delta * 4); }
+        if (bodyRef.current)     { bodyRef.current.rotation.x = THREE.MathUtils.lerp(bodyRef.current.rotation.x, -0.07 * up, delta * 3); bodyRef.current.rotation.z = THREE.MathUtils.lerp(bodyRef.current.rotation.z, 0, delta * 4); bodyRef.current.scale.y = 1 + breathe; }
+        if (headGroup.current)   { headGroup.current.rotation.x = THREE.MathUtils.lerp(headGroup.current.rotation.x, -0.12 + Math.sin(t * 0.3) * 0.04, delta * 3); headGroup.current.rotation.y = THREE.MathUtils.lerp(headGroup.current.rotation.y, Math.sin(t * 0.28) * 0.16, delta * 2); headGroup.current.rotation.z = THREE.MathUtils.lerp(headGroup.current.rotation.z, Math.sin(t * 0.18) * 0.06, delta * 2); }
         if (leftLegRef.current)  leftLegRef.current.rotation.x  = THREE.MathUtils.lerp(leftLegRef.current.rotation.x,  0, delta * 5);
         if (rightLegRef.current) rightLegRef.current.rotation.x = THREE.MathUtils.lerp(rightLegRef.current.rotation.x, 0, delta * 5);
         groupRef.current.position.y = 0;
+
       } else {
+        // ── TYPING — variable rhythm + focus lean + screen glance ────────
         const legBend = s * -1.35;
         if (leftLegRef.current)  leftLegRef.current.rotation.x  = THREE.MathUtils.lerp(leftLegRef.current.rotation.x,  legBend, delta * 5);
         if (rightLegRef.current) rightLegRef.current.rotation.x = THREE.MathUtils.lerp(rightLegRef.current.rotation.x, legBend, delta * 5);
         groupRef.current.position.y = s * 0.30;
 
         typingPhase.current += delta * 10;
-        const tapL = Math.sin(typingPhase.current * 1.3) * 0.09;
-        const tapR = Math.sin(typingPhase.current * 1.7 + 1.1) * 0.09;
+        const typingActivity = 0.7 + Math.sin(t * 0.18 + agent.id * 0.4) * 0.3;
+        const tapL  = Math.sin(typingPhase.current * 1.4 + agent.id * 0.3) * 0.10 * typingActivity;
+        const tapL2 = Math.sin(typingPhase.current * 2.3 + agent.id * 0.7) * 0.04 * typingActivity;
+        const tapR  = Math.sin(typingPhase.current * 1.8 + agent.id * 0.5 + 1.1) * 0.10 * typingActivity;
+        const tapR2 = Math.sin(typingPhase.current * 2.8 + agent.id * 0.2) * 0.04 * typingActivity;
         const reach = -(0.38 + s * 0.14);
-        if (leftArmRef.current)  { leftArmRef.current.rotation.x  = THREE.MathUtils.lerp(leftArmRef.current.rotation.x,  reach + tapL, delta * 8); leftArmRef.current.rotation.z  = 0.28; }
-        if (rightArmRef.current) { rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, reach + tapR, delta * 8); rightArmRef.current.rotation.z = -0.28; }
-        if (bodyRef.current) { bodyRef.current.rotation.x = 0.08 + s * 0.06; bodyRef.current.rotation.z = 0; }
+        const focusLean = 0.08 + s * 0.06 + Math.sin(t * 0.22 + agent.id) * 0.02;
+        const screenGlance = Math.sin(t * 0.12 + agent.id * 0.3) > 0.72 ? 1 : 0;
+
+        if (leftArmRef.current)  { leftArmRef.current.rotation.x  = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, reach + tapL + tapL2, delta * 9); leftArmRef.current.rotation.z  = THREE.MathUtils.lerp(leftArmRef.current.rotation.z, 0.28, delta * 5); }
+        if (rightArmRef.current) { rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, reach + tapR + tapR2, delta * 9); rightArmRef.current.rotation.z = THREE.MathUtils.lerp(rightArmRef.current.rotation.z, -0.28, delta * 5); }
+        if (bodyRef.current)     { bodyRef.current.rotation.x = THREE.MathUtils.lerp(bodyRef.current.rotation.x, focusLean, delta * 3); bodyRef.current.rotation.z = THREE.MathUtils.lerp(bodyRef.current.rotation.z, 0, delta * 4); bodyRef.current.scale.y = 1 + breathe; }
         if (headGroup.current) {
-          headGroup.current.rotation.x = THREE.MathUtils.lerp(headGroup.current.rotation.x, Math.sin(t * 0.45) * 0.04 + 0.08, delta * 4);
-          headGroup.current.rotation.y = THREE.MathUtils.lerp(headGroup.current.rotation.y, 0, delta * 3);
+          headGroup.current.rotation.x = THREE.MathUtils.lerp(headGroup.current.rotation.x, 0.08 + Math.sin(t * 0.45) * 0.04 - screenGlance * 0.08, delta * 4);
+          headGroup.current.rotation.y = THREE.MathUtils.lerp(headGroup.current.rotation.y, Math.sin(t * 0.28 + agent.id * 0.4) * 0.07 + screenGlance * 0.10, delta * 3);
+          headGroup.current.rotation.z = THREE.MathUtils.lerp(headGroup.current.rotation.z, 0, delta * 4);
         }
       }
 
     } else if (status === "chatting") {
-      const gesture = Math.sin(t * 1.6) * 0.28;
-      const nod     = Math.sin(t * 2.1) * 0.07;
-      const lean    = Math.sin(t * 0.7) * 0.04;
-      if (leftArmRef.current)  { leftArmRef.current.rotation.x  =  gesture - 0.12; leftArmRef.current.rotation.z  = 0.22 + Math.sin(t * 0.9) * 0.1; }
-      if (rightArmRef.current) { rightArmRef.current.rotation.x = -gesture * 0.8 - 0.1; rightArmRef.current.rotation.z = -0.22 - Math.sin(t * 1.1) * 0.08; }
-      if (headGroup.current)   { headGroup.current.rotation.y = Math.sin(t * 0.85) * 0.18; headGroup.current.rotation.x = nod; }
-      if (bodyRef.current)     { bodyRef.current.rotation.z = lean; bodyRef.current.rotation.x = 0; }
+      // ── CHATTING — emphasis beats + alternating gestures ─────────────
+      const emphBeat = Math.sin(t * 2.8 + agent.id) * 0.5 + 0.5;
+      const gesture  = Math.sin(t * 1.6 + agent.id * 0.5) * 0.28 + emphBeat * 0.06;
+      const nod      = emphBeat * 0.09;
+
+      if (leftArmRef.current)  { leftArmRef.current.rotation.x  = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, gesture - 0.12, delta * 7); leftArmRef.current.rotation.z  = THREE.MathUtils.lerp(leftArmRef.current.rotation.z, 0.22 + Math.sin(t * 0.9 + agent.id) * 0.12, delta * 5); }
+      if (rightArmRef.current) { rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, -gesture * 0.7 - 0.10 + Math.sin(t * 2.1 + agent.id) * 0.07, delta * 7); rightArmRef.current.rotation.z = THREE.MathUtils.lerp(rightArmRef.current.rotation.z, -0.22 - Math.sin(t * 1.1 + agent.id) * 0.08, delta * 5); }
+      if (headGroup.current)   { headGroup.current.rotation.y = THREE.MathUtils.lerp(headGroup.current.rotation.y, Math.sin(t * 0.85 + agent.id * 0.3) * 0.18, delta * 4); headGroup.current.rotation.x = THREE.MathUtils.lerp(headGroup.current.rotation.x, nod, delta * 6); headGroup.current.rotation.z = THREE.MathUtils.lerp(headGroup.current.rotation.z, Math.sin(t * 0.4 + agent.id) * 0.025, delta * 3); }
+      if (bodyRef.current)     { bodyRef.current.rotation.z = THREE.MathUtils.lerp(bodyRef.current.rotation.z, Math.sin(t * 0.7 + agent.id) * 0.04, delta * 3); bodyRef.current.rotation.x = THREE.MathUtils.lerp(bodyRef.current.rotation.x, 0.02 + emphBeat * 0.03, delta * 3); bodyRef.current.scale.y = 1 + breathe; }
       if (leftLegRef.current)  leftLegRef.current.rotation.x  = THREE.MathUtils.lerp(leftLegRef.current.rotation.x,  0, delta * 5);
       if (rightLegRef.current) rightLegRef.current.rotation.x = THREE.MathUtils.lerp(rightLegRef.current.rotation.x, 0, delta * 5);
       groupRef.current.position.y = 0;
 
     } else {
+      // ── IDLE — weight shift + glance timer + breathing ────────────────
       idlePhase.current += delta * 0.8;
-      const breathe     = Math.sin(t * 1.1) * 0.012;
-      const weightShift = Math.sin(idlePhase.current * 0.4) * 0.025;
-      if (bodyRef.current) { bodyRef.current.scale.y = 1 + breathe; bodyRef.current.rotation.z = weightShift; bodyRef.current.rotation.x = 0; }
-      if (headGroup.current) { headGroup.current.rotation.y = Math.sin(t * 0.28) * 0.08; headGroup.current.rotation.x = 0; }
-      if (leftArmRef.current)  { leftArmRef.current.rotation.x  = 0; leftArmRef.current.rotation.z  = 0.1 + weightShift * 0.5; }
-      if (rightArmRef.current) { rightArmRef.current.rotation.x = 0; rightArmRef.current.rotation.z = -0.1 - weightShift * 0.5; }
+      const weightCycle = Math.sin(idlePhase.current * 0.4) * 0.022;
+      if (bodyRef.current) { bodyRef.current.scale.y = 1 + breathe; bodyRef.current.rotation.z = THREE.MathUtils.lerp(bodyRef.current.rotation.z, weightCycle, delta * 2); bodyRef.current.rotation.x = THREE.MathUtils.lerp(bodyRef.current.rotation.x, 0, delta * 4); }
+
+      // Glance: periodic random look left/right
+      glanceTimer.current -= delta;
+      if (glanceTimer.current <= 0) {
+        const r = Math.random();
+        glanceTgt.current = r < 0.35 ? -(0.14 + Math.random() * 0.18) : r < 0.70 ? (0.14 + Math.random() * 0.18) : 0;
+        glanceTimer.current = 3 + Math.random() * 6;
+      }
+      if (headGroup.current) { headGroup.current.rotation.y = THREE.MathUtils.lerp(headGroup.current.rotation.y, glanceTgt.current + Math.sin(t * 0.28 + agent.id * 0.4) * 0.06, delta * 1.8); headGroup.current.rotation.x = THREE.MathUtils.lerp(headGroup.current.rotation.x, Math.sin(t * 0.55) * 0.03, delta * 3); headGroup.current.rotation.z = THREE.MathUtils.lerp(headGroup.current.rotation.z, 0, delta * 4); }
+      if (leftArmRef.current)  { leftArmRef.current.rotation.x  = THREE.MathUtils.lerp(leftArmRef.current.rotation.x,  0, delta * 4); leftArmRef.current.rotation.z  = THREE.MathUtils.lerp(leftArmRef.current.rotation.z, 0.10 + weightCycle * 0.4, delta * 2); }
+      if (rightArmRef.current) { rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, 0, delta * 4); rightArmRef.current.rotation.z = THREE.MathUtils.lerp(rightArmRef.current.rotation.z, -0.10 - weightCycle * 0.4, delta * 2); }
       if (leftLegRef.current)  leftLegRef.current.rotation.x  = THREE.MathUtils.lerp(leftLegRef.current.rotation.x,  0, delta * 5);
       if (rightLegRef.current) rightLegRef.current.rotation.x = THREE.MathUtils.lerp(rightLegRef.current.rotation.x, 0, delta * 5);
       groupRef.current.position.y = 0;
