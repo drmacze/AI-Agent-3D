@@ -1,0 +1,234 @@
+name: ChatGPT Temporary Bromo MCPE Port
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  port-bromo-to-mcpe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout temporary branch
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq unzip zip
+
+      - name: Download validated Java world artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: Gunung-Bromo-1to1-Java-OpenWorld
+          path: source-artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31137800262
+
+      - name: Verify and extract Java world
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd source-artifact
+          sha256sum -c Gunung_Bromo_1to1_Java_OpenWorld.sha256
+          mkdir -p "$GITHUB_WORKSPACE/source-world"
+          unzip -q Gunung_Bromo_1to1_Java_OpenWorld.zip -d "$GITHUB_WORKSPACE/source-world"
+          WORLD_DIR="$(find "$GITHUB_WORKSPACE/source-world" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          test -f "$WORLD_DIR/level.dat"
+          test -d "$WORLD_DIR/region"
+          printf '%s\n' "$WORLD_DIR" > "$GITHUB_WORKSPACE/java_world_dir.txt"
+          echo "Java world: $WORLD_DIR"
+
+      - name: Download latest official Chunker CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --show-error --silent --location \
+            -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/HiveGamesOSS/Chunker/releases/latest \
+            -o chunker-release.json
+
+          TAG="$(jq -r '.tag_name' chunker-release.json)"
+          CLI_URL="$(jq -r '.assets[] | select((.name | ascii_downcase | contains("chunker-cli")) and (.name | endswith(".jar"))) | .browser_download_url' chunker-release.json | head -n 1)"
+          CLI_DIGEST="$(jq -r '.assets[] | select((.name | ascii_downcase | contains("chunker-cli")) and (.name | endswith(".jar"))) | (.digest // "")' chunker-release.json | head -n 1)"
+
+          if [ -z "$CLI_URL" ] || [ "$CLI_URL" = "null" ]; then
+            echo "Chunker CLI jar was not present in release $TAG" >&2
+            exit 1
+          fi
+
+          echo "Downloading Chunker $TAG"
+          curl --fail --show-error --silent --location "$CLI_URL" -o chunker-cli.jar
+          test -s chunker-cli.jar
+
+          if [[ "$CLI_DIGEST" == sha256:* ]]; then
+            printf '%s  %s\n' "${CLI_DIGEST#sha256:}" chunker-cli.jar | sha256sum -c -
+          fi
+
+          java -jar chunker-cli.jar --version
+          printf '%s\n' "$TAG" > chunker_version.txt
+
+      - name: Convert Java world to Bedrock MCPE
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORLD_DIR="$(cat java_world_dir.txt)"
+          OUT_DIR="$GITHUB_WORKSPACE/bedrock-world"
+          rm -rf "$OUT_DIR"
+          mkdir -p "$OUT_DIR"
+
+          cat > converter_settings.json <<'JSON'
+          {
+            "mapConversion": false,
+            "lootTableConversion": false,
+            "itemConversion": false,
+            "blockConnections": true,
+            "enableCompact": true,
+            "discardEmptyChunks": false,
+            "preventYBiomeBlending": true,
+            "customIdentifiers": false
+          }
+          JSON
+
+          java -Xms1G -Xmx5G -XX:+UseG1GC -jar chunker-cli.jar \
+            -i "$WORLD_DIR" \
+            -o "$OUT_DIR" \
+            -f BEDROCK_1_26_40 \
+            -c converter_settings.json \
+            2>&1 | tee chunker-conversion.log
+
+          grep -q 'Conversion complete!' chunker-conversion.log
+          test -f "$OUT_DIR/level.dat"
+          test -d "$OUT_DIR/db"
+
+      - name: Add MCPE notes and validate Bedrock world
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT_DIR="$GITHUB_WORKSPACE/bedrock-world"
+          export OUT_DIR
+
+          printf '%s\n' 'Gunung Bromo 1:1 MCPE Open World' > "$OUT_DIR/levelname.txt"
+          cat > "$OUT_DIR/BACA_SAYA_MCPE.txt" <<'EOF'
+          GUNUNG BROMO 1:1 — MINECRAFT BEDROCK / MCPE
+
+          Format: .mcworld untuk Minecraft Bedrock Edition / MCPE
+          Mode sumber: Creative, commands aktif
+          Skala horizontal: 1 blok = 1 meter
+          Area inti: sekitar 4.096 x 4.096 meter/blok
+          Terrain: elevasi geografis nyata
+          Objek: data OpenStreetMap
+          Target format: Bedrock 1.26.40
+
+          World ini dikonversi dari Java Anvil menggunakan Chunker.
+          Terrain tersimpan permanen di database LevelDB, bukan dibuat oleh skrip saat dimainkan.
+
+          Catatan konversi:
+          - Entities dan inventaris pemain tidak dipindahkan oleh Chunker.
+          - World sumber ini berfokus pada terrain dan objek geografis, sehingga batasan tersebut tidak memengaruhi bentuk Bromo.
+
+          Cara memasang di Android/iOS:
+          1. Simpan file .mcworld ke perangkat.
+          2. Buka/Bagikan file menggunakan Minecraft.
+          3. Tunggu pesan Import Started dan Successfully Imported.
+          4. Buka Play > Worlds.
+          EOF
+
+          python3 - <<'PY'
+          import json
+          import os
+          import struct
+          from pathlib import Path
+
+          world = Path(os.environ['OUT_DIR'])
+          level = world / 'level.dat'
+          raw = level.read_bytes()
+          if len(raw) < 8:
+              raise SystemExit('Bedrock level.dat is shorter than its 8-byte header')
+
+          storage_version, payload_length = struct.unpack_from('<II', raw, 0)
+          actual_payload = len(raw) - 8
+          if payload_length != actual_payload:
+              raise SystemExit(f'level.dat payload length mismatch: header={payload_length}, actual={actual_payload}')
+
+          db = world / 'db'
+          required = [db / 'CURRENT']
+          for path in required:
+              if not path.is_file():
+                  raise SystemExit(f'Missing LevelDB file: {path.name}')
+
+          db_files = [p for p in db.rglob('*') if p.is_file()]
+          ldb_files = [p for p in db_files if p.suffix in {'.ldb', '.sst'}]
+          manifest_files = [p for p in db_files if p.name.startswith('MANIFEST-')]
+          if not manifest_files:
+              raise SystemExit('Missing LevelDB MANIFEST file')
+          if not ldb_files:
+              raise SystemExit('No LevelDB table files were created')
+
+          db_bytes = sum(p.stat().st_size for p in db_files)
+          world_bytes = sum(p.stat().st_size for p in world.rglob('*') if p.is_file())
+          if db_bytes < 20_000_000:
+              raise SystemExit(f'Converted LevelDB unexpectedly small: {db_bytes} bytes')
+
+          current_target = (db / 'CURRENT').read_text(encoding='ascii', errors='strict').strip()
+          if not (db / current_target).is_file():
+              raise SystemExit(f'CURRENT points to missing file: {current_target}')
+
+          report = {
+              'world_name': (world / 'levelname.txt').read_text(encoding='utf-8').strip(),
+              'target_format': 'BEDROCK_1_26_40',
+              'level_dat_storage_version': storage_version,
+              'level_dat_payload_bytes': payload_length,
+              'leveldb_file_count': len(db_files),
+              'leveldb_table_count': len(ldb_files),
+              'leveldb_bytes': db_bytes,
+              'uncompressed_world_bytes': world_bytes,
+              'current_manifest': current_target,
+              'required_files_valid': True,
+          }
+          (world / 'VALIDATION_REPORT_MCPE.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
+          print(json.dumps(report, indent=2))
+          PY
+
+      - name: Package and test mcworld
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT_DIR="$GITHUB_WORKSPACE/bedrock-world"
+          MCWORLD="$GITHUB_WORKSPACE/Gunung_Bromo_1to1_MCPE_OpenWorld.mcworld"
+          rm -f "$MCWORLD"
+          cd "$OUT_DIR"
+          zip -0 -q -r "$MCWORLD" .
+          cd "$GITHUB_WORKSPACE"
+          unzip -t Gunung_Bromo_1to1_MCPE_OpenWorld.mcworld
+          sha256sum Gunung_Bromo_1to1_MCPE_OpenWorld.mcworld > Gunung_Bromo_1to1_MCPE_OpenWorld.sha256
+          cp "$OUT_DIR/VALIDATION_REPORT_MCPE.json" .
+          cp "$OUT_DIR/BACA_SAYA_MCPE.txt" PETUNJUK_Gunung_Bromo_1to1_MCPE.txt
+          ls -lh Gunung_Bromo_1to1_MCPE_OpenWorld.mcworld
+
+      - name: Upload converted MCPE world
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gunung-Bromo-1to1-MCPE-OpenWorld
+          path: |
+            Gunung_Bromo_1to1_MCPE_OpenWorld.mcworld
+            Gunung_Bromo_1to1_MCPE_OpenWorld.sha256
+            VALIDATION_REPORT_MCPE.json
+            PETUNJUK_Gunung_Bromo_1to1_MCPE.txt
+            chunker_version.txt
+            chunker-conversion.log
+          compression-level: 0
+          retention-days: 2
+          if-no-files-found: error
