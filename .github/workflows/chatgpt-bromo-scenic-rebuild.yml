@@ -1,0 +1,187 @@
+name: ChatGPT Bromo Scenic Rebuild
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-bromo-scenic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout temporary branch
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq zip unzip
+
+      - name: Reassemble scenic source bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat tmp_bromo_scenic/bundle10_* | base64 -d > /tmp/bromo-scenic-bundle.tar.gz
+          mkdir -p /tmp/bromo-scenic-bundle
+          tar -xzf /tmp/bromo-scenic-bundle.tar.gz -C /tmp/bromo-scenic-bundle
+          test -f /tmp/bromo-scenic-bundle/generate_bromo_scenic_java.py
+          test -f /tmp/bromo-scenic-bundle/postprocess_bromo_bedrock.py
+          test -f /tmp/bromo-scenic-bundle/bromo_scenic_data.b64
+
+      - name: Generate physical Java scenic world
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 /tmp/bromo-scenic-bundle/generate_bromo_scenic_java.py \
+            --data /tmp/bromo-scenic-bundle/bromo_scenic_data.b64 \
+            --out "$GITHUB_WORKSPACE/java-world"
+          test -f java-world/level.dat
+          test -f java-world/region/r.0.0.mca
+          python3 - <<'PY'
+          import pathlib, struct, zlib
+          p = pathlib.Path('java-world/region/r.0.0.mca')
+          raw = p.read_bytes()
+          assert len(raw) >= 8192
+          count = 0
+          for i in range(1024):
+              loc = struct.unpack_from('>I', raw, i * 4)[0]
+              off, sectors = loc >> 8, loc & 255
+              if not off:
+                  continue
+              assert sectors > 0
+              pos = off * 4096
+              length = struct.unpack_from('>I', raw, pos)[0]
+              assert raw[pos + 4] == 2
+              zlib.decompress(raw[pos + 5:pos + 4 + length])
+              count += 1
+          print('Validated populated Anvil chunks:', count)
+          assert count == 784, count
+          PY
+
+      - name: Download official Chunker CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --show-error --silent --location \
+            -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/HiveGamesOSS/Chunker/releases/latest \
+            -o chunker-release.json
+          TAG="$(jq -r '.tag_name' chunker-release.json)"
+          CLI_URL="$(jq -r '.assets[] | select((.name | ascii_downcase | contains("chunker-cli")) and (.name | endswith(".jar"))) | .browser_download_url' chunker-release.json | head -n 1)"
+          CLI_DIGEST="$(jq -r '.assets[] | select((.name | ascii_downcase | contains("chunker-cli")) and (.name | endswith(".jar"))) | (.digest // "")' chunker-release.json | head -n 1)"
+          test -n "$CLI_URL"
+          test "$CLI_URL" != "null"
+          echo "Downloading Chunker $TAG"
+          curl --fail --show-error --silent --location "$CLI_URL" -o chunker-cli.jar
+          test -s chunker-cli.jar
+          if [[ "$CLI_DIGEST" == sha256:* ]]; then
+            printf '%s  %s\n' "${CLI_DIGEST#sha256:}" chunker-cli.jar | sha256sum -c -
+          fi
+          java -jar chunker-cli.jar --version
+          printf '%s\n' "$TAG" > chunker_version.txt
+
+      - name: Convert Java world to Bedrock
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/bedrock-world"
+          cat > converter_settings.json <<'JSON'
+          {
+            "mapConversion": false,
+            "lootTableConversion": false,
+            "itemConversion": false,
+            "blockConnections": true,
+            "enableCompact": true,
+            "discardEmptyChunks": false,
+            "preventYBiomeBlending": true,
+            "customIdentifiers": false
+          }
+          JSON
+          java -Xms1G -Xmx5G -XX:+UseG1GC -jar chunker-cli.jar \
+            -i "$GITHUB_WORKSPACE/java-world" \
+            -o "$GITHUB_WORKSPACE/bedrock-world" \
+            -f BEDROCK_1_26_40 \
+            -c converter_settings.json \
+            2>&1 | tee chunker.log
+          grep -q 'Conversion complete!' chunker.log
+          test -f bedrock-world/level.dat
+          test -d bedrock-world/db
+
+      - name: Add scenic resource and behavior packs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 /tmp/bromo-scenic-bundle/postprocess_bromo_bedrock.py \
+            --world "$GITHUB_WORKSPACE/bedrock-world" \
+            --report "$GITHUB_WORKSPACE/java-world/SCENIC_BUILD_REPORT.json"
+
+      - name: Validate Bedrock database and package mcworld
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f bedrock-world/level.dat
+          test -d bedrock-world/db
+          test -f bedrock-world/db/CURRENT
+          test -n "$(find bedrock-world/db -type f \( -name '*.ldb' -o -name '*.sst' \) -print -quit)"
+          python3 - <<'PY'
+          import json, pathlib, struct
+          world = pathlib.Path('bedrock-world')
+          raw = (world / 'level.dat').read_bytes()
+          assert len(raw) > 8
+          storage_version, payload_length = struct.unpack_from('<II', raw, 0)
+          assert payload_length == len(raw) - 8, (payload_length, len(raw) - 8)
+          files = [p for p in (world / 'db').rglob('*') if p.is_file()]
+          tables = [p for p in files if p.suffix in {'.ldb', '.sst'}]
+          manifests = [p for p in files if p.name.startswith('MANIFEST-')]
+          assert tables
+          assert manifests
+          current = (world / 'db' / 'CURRENT').read_text(encoding='ascii').strip()
+          assert (world / 'db' / current).is_file()
+          report_path = world / 'VALIDATION_REPORT_SCENIC.json'
+          report = json.loads(report_path.read_text(encoding='utf-8'))
+          report.update({
+              'target_format': 'BEDROCK_1_26_40',
+              'bedrock_level_dat_storage_version': storage_version,
+              'bedrock_level_dat_payload_bytes': payload_length,
+              'leveldb_file_count': len(files),
+              'leveldb_table_count': len(tables),
+              'leveldb_bytes': sum(p.stat().st_size for p in files),
+              'current_manifest': current,
+              'required_files_valid': True,
+          })
+          report_path.write_text(json.dumps(report, indent=2), encoding='utf-8')
+          print(json.dumps(report, indent=2))
+          PY
+          cd bedrock-world
+          zip -0 -q -r ../Gunung_Bromo_Scenic_Rebuild_iPhone.mcworld .
+          cd ..
+          unzip -t Gunung_Bromo_Scenic_Rebuild_iPhone.mcworld
+          sha256sum Gunung_Bromo_Scenic_Rebuild_iPhone.mcworld > Gunung_Bromo_Scenic_Rebuild_iPhone.sha256
+          cp bedrock-world/VALIDATION_REPORT_SCENIC.json .
+          cp bedrock-world/BACA_SAYA_BROMO_SCENIC.txt PETUNJUK_Gunung_Bromo_Scenic_Rebuild_iPhone.txt
+          ls -lh Gunung_Bromo_Scenic_Rebuild_iPhone.mcworld
+
+      - name: Upload finished iPhone world
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gunung-Bromo-Scenic-Rebuild-iPhone
+          path: |
+            Gunung_Bromo_Scenic_Rebuild_iPhone.mcworld
+            Gunung_Bromo_Scenic_Rebuild_iPhone.sha256
+            VALIDATION_REPORT_SCENIC.json
+            PETUNJUK_Gunung_Bromo_Scenic_Rebuild_iPhone.txt
+            chunker_version.txt
+            chunker.log
+          compression-level: 0
+          retention-days: 2
+          if-no-files-found: error
