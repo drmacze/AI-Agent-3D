@@ -40,6 +40,12 @@ jobs:
           cd arnis
           git checkout "$ARNIS_COMMIT"
 
+      - name: Restore Rust build cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: arnis
+          key: bromo-arnis-2-5-0
+
       - name: Build Arnis CLI
         working-directory: arnis
         run: cargo build --release --no-default-features
@@ -58,7 +64,7 @@ jobs:
             --interior=false \
             --roof=true \
             --city-boundaries=false \
-            --downloader curl
+            --downloader requests
 
       - name: Add provenance and usage notes
         run: |
