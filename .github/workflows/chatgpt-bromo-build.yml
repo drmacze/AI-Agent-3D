@@ -16,6 +16,12 @@ permissions:
 
 env:
   ARNIS_COMMIT: d605b7f3d5d366e872c5271ead9d12393d2a295e
+  MIN_LAT: "-7.961017927670477"
+  MIN_LON: "112.93442549805327"
+  MID_LAT: "-7.9425"
+  MID_LON: "112.9530"
+  MAX_LAT: "-7.9239820558780005"
+  MAX_LON: "112.97157450194673"
   BBOX: "-7.961017927670477,112.93442549805327,-7.9239820558780005,112.97157450194673"
   SPAWN_LAT: "-7.9425"
   SPAWN_LNG: "112.9530"
@@ -32,7 +38,7 @@ jobs:
       - name: Install system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y curl zip jq
+          sudo apt-get install -y curl zip jq python3-pip
 
       - name: Checkout pinned Arnis source
         run: |
@@ -40,15 +46,118 @@ jobs:
           cd arnis
           git checkout "$ARNIS_COMMIT"
 
-      - name: Restore Rust build cache
-        uses: Swatinem/rust-cache@v2
+      - name: Restore compiled Arnis binary
+        id: arnis-cache
+        uses: actions/cache/restore@v4
         with:
-          workspaces: arnis
-          key: bromo-arnis-2-5-0
+          path: arnis/target/release/arnis
+          key: arnis-linux-${{ env.ARNIS_COMMIT }}
 
       - name: Build Arnis CLI
+        if: steps.arnis-cache.outputs.cache-hit != 'true'
         working-directory: arnis
         run: cargo build --release --no-default-features
+
+      - name: Save compiled Arnis binary
+        if: steps.arnis-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: arnis/target/release/arnis
+          key: arnis-linux-${{ env.ARNIS_COMMIT }}
+
+      - name: Fetch selective Bromo OSM data in four tiles
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/osm_tiles"
+
+          fetch_tile() {
+            local name="$1"
+            local bbox="$2"
+            local query_file="$GITHUB_WORKSPACE/osm_tiles/${name}.query"
+            local output_file="$GITHUB_WORKSPACE/osm_tiles/${name}.json"
+
+            cat > "$query_file" <<EOF
+          [out:json][timeout:300][bbox:${bbox}];
+          (
+            nwr["building"];
+            nwr["building:part"];
+            nwr["highway"];
+            nwr["landuse"];
+            nwr["natural"];
+            nwr["leisure"];
+            nwr["water"];
+            nwr["waterway"];
+            nwr["amenity"];
+            nwr["tourism"];
+            nwr["bridge"];
+            nwr["railway"];
+            nwr["barrier"];
+            nwr["entrance"];
+            nwr["door"];
+            nwr["power"];
+            nwr["historic"];
+            nwr["emergency"];
+            nwr["man_made"];
+            nwr["aeroway"];
+          );
+          out body;
+          >;
+          out skel qt;
+          EOF
+
+            local servers=(
+              "https://overpass.kumi.systems/api/interpreter"
+              "https://overpass.private.coffee/api/interpreter"
+              "https://overpass-api.de/api/interpreter"
+              "https://lz4.overpass-api.de/api/interpreter"
+            )
+
+            local ok=0
+            for server in "${servers[@]}"; do
+              echo "Fetching ${name} from ${server}"
+              rm -f "${output_file}.tmp"
+              if curl \
+                --user-agent "ChatGPT-Bromo-Map-Build/1.0" \
+                --fail --show-error --silent \
+                --retry 2 --retry-all-errors --retry-delay 5 \
+                --connect-timeout 30 --max-time 420 \
+                --data-urlencode "data@${query_file}" \
+                "$server" -o "${output_file}.tmp"; then
+                if jq -e '.elements and (.elements | length > 0)' "${output_file}.tmp" >/dev/null; then
+                  mv "${output_file}.tmp" "$output_file"
+                  ok=1
+                  break
+                fi
+              fi
+            done
+
+            if [ "$ok" -ne 1 ]; then
+              echo "Unable to retrieve valid OSM tile ${name}" >&2
+              exit 1
+            fi
+            echo "${name}: $(jq '.elements | length' "$output_file") elements"
+          }
+
+          fetch_tile sw "$MIN_LAT,$MIN_LON,$MID_LAT,$MID_LON"
+          fetch_tile se "$MIN_LAT,$MID_LON,$MID_LAT,$MAX_LON"
+          fetch_tile nw "$MID_LAT,$MIN_LON,$MAX_LAT,$MID_LON"
+          fetch_tile ne "$MID_LAT,$MID_LON,$MAX_LAT,$MAX_LON"
+
+          jq -s '
+            {
+              version: (.[0].version // 0.6),
+              generator: "ChatGPT Bromo tiled Overpass merge",
+              osm3s: (.[0].osm3s // {}),
+              elements: ([.[].elements[]] | unique_by((.type // "") + ":" + (.id | tostring)))
+            }
+          ' "$GITHUB_WORKSPACE"/osm_tiles/*.json > "$GITHUB_WORKSPACE/bromo-osm.json"
+
+          ELEMENTS="$(jq '.elements | length' "$GITHUB_WORKSPACE/bromo-osm.json")"
+          if [ "$ELEMENTS" -lt 100 ]; then
+            echo "Merged OSM dataset unexpectedly small: $ELEMENTS" >&2
+            exit 1
+          fi
+          echo "Merged OSM elements: $ELEMENTS"
 
       - name: Generate real Bromo Java world
         run: |
@@ -64,27 +173,49 @@ jobs:
             --interior=false \
             --roof=true \
             --city-boundaries=false \
-            --downloader requests
+            --file "$GITHUB_WORKSPACE/bromo-osm.json"
 
-      - name: Add provenance and usage notes
+      - name: Set Creative mode and add provenance notes
         run: |
           set -euo pipefail
+          python3 -m pip install --user nbtlib
           WORLD_DIR="$(find "$GITHUB_WORKSPACE/generated" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
           if [ -z "$WORLD_DIR" ]; then
             echo "Generated world directory not found" >&2
             exit 1
           fi
+          export WORLD_DIR
+
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import nbtlib
+
+          world = Path(os.environ["WORLD_DIR"])
+          level_path = world / "level.dat"
+          level = nbtlib.load(level_path)
+          data = level["Data"]
+          data["GameType"] = nbtlib.Int(1)
+          data["allowCommands"] = nbtlib.Byte(1)
+          data["LevelName"] = nbtlib.String("Gunung Bromo 1to1 Java Open World")
+          player = data.get("Player")
+          if player is not None:
+              player["playerGameType"] = nbtlib.Int(1)
+          level.save(gzipped=True)
+          PY
+
           cat > "$WORLD_DIR/BACA_SAYA_BROMO.txt" <<'EOF'
           GUNUNG BROMO — JAVA EDITION OPEN WORLD
 
-          Jenis: Minecraft Java Edition world (Anvil), Creative-ready
+          Jenis: Minecraft Java Edition world (Anvil)
+          Mode awal: Creative, commands aktif
           Skala horizontal: 1 blok = 1 meter
           Area inti: sekitar 4.096 x 4.096 meter/blok
           Pusat: Gunung Bromo, Jawa Timur
-          Sumber bentuk dunia: elevasi nyata + data OpenStreetMap, diproses oleh Arnis
-          Terrain dan objek tersimpan di chunk; bukan generator saat world dimainkan.
+          Sumber bentuk dunia: elevasi nyata dan data OpenStreetMap, diproses oleh Arnis
+          Terrain dan objek tersimpan dalam chunk .mca; bukan generator saat world dimainkan.
 
-          Koordinat geografis bbox:
+          Batas geografis:
           -7.961017927670477,112.93442549805327 sampai
           -7.9239820558780005,112.97157450194673
 
@@ -92,42 +223,89 @@ jobs:
           1. Ekstrak ZIP.
           2. Salin folder world ke .minecraft/saves/
           3. Buka dengan Minecraft Java Edition modern.
-          4. World dibuat untuk eksplorasi Creative. Versi Minecraft dapat melakukan upgrade data saat pertama dibuka.
 
-          Catatan penting:
-          Skala horizontal benar 1:1. Elevasi vertikal disesuaikan oleh generator agar muat dalam batas tinggi Minecraft.
+          Catatan:
+          Skala horizontal adalah 1:1. Elevasi vertikal dipetakan agar muat dalam batas tinggi Minecraft,
+          sehingga bukan pengukuran vertikal 1 blok = 1 meter untuk seluruh rentang gunung.
           EOF
           printf '%s\n' "$WORLD_DIR" > "$GITHUB_WORKSPACE/world_dir.txt"
 
-      - name: Validate generated world
+      - name: Validate Anvil world and chunks
         run: |
           set -euo pipefail
           WORLD_DIR="$(cat "$GITHUB_WORKSPACE/world_dir.txt")"
+          export WORLD_DIR
           test -f "$WORLD_DIR/level.dat"
           test -d "$WORLD_DIR/region"
-          REGION_COUNT="$(find "$WORLD_DIR/region" -type f -name 'r.*.*.mca' | wc -l)"
-          CHUNK_BYTES="$(du -sb "$WORLD_DIR" | cut -f1)"
-          if [ "$REGION_COUNT" -lt 4 ]; then
-            echo "Too few Anvil region files: $REGION_COUNT" >&2
-            exit 1
-          fi
-          if [ "$CHUNK_BYTES" -lt 1000000 ]; then
-            echo "World unexpectedly small: $CHUNK_BYTES bytes" >&2
-            exit 1
-          fi
-          echo "Region files: $REGION_COUNT"
-          echo "Uncompressed bytes: $CHUNK_BYTES"
-          find "$WORLD_DIR" -maxdepth 2 -type f | sort | head -n 100
+
+          python3 - <<'PY'
+          import json
+          import os
+          import struct
+          from pathlib import Path
+          import nbtlib
+
+          world = Path(os.environ["WORLD_DIR"])
+          level = nbtlib.load(world / "level.dat")
+          data = level["Data"]
+          if int(data["GameType"]) != 1:
+              raise SystemExit("level.dat is not Creative mode")
+          if int(data["allowCommands"]) != 1:
+              raise SystemExit("commands are not enabled")
+
+          regions = sorted((world / "region").glob("r.*.*.mca"))
+          populated = 0
+          invalid = []
+          for path in regions:
+              raw = path.read_bytes()
+              if len(raw) < 8192:
+                  invalid.append(f"{path.name}: file shorter than Anvil header")
+                  continue
+              sectors = (len(raw) + 4095) // 4096
+              for i in range(1024):
+                  entry = raw[i * 4:(i + 1) * 4]
+                  offset = int.from_bytes(entry[:3], "big")
+                  count = entry[3]
+                  if offset == 0 and count == 0:
+                      continue
+                  populated += 1
+                  if offset < 2 or count == 0 or offset + count > sectors:
+                      invalid.append(f"{path.name}: invalid location entry {i}")
+
+          size = sum(p.stat().st_size for p in world.rglob("*") if p.is_file())
+          report = {
+              "world_name": str(data.get("LevelName", "")),
+              "game_type": int(data["GameType"]),
+              "commands": int(data["allowCommands"]),
+              "region_files": len(regions),
+              "populated_chunk_entries": populated,
+              "uncompressed_world_bytes": size,
+              "invalid_entries": invalid[:20],
+          }
+          (world / "VALIDATION_REPORT.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+          print(json.dumps(report, indent=2))
+
+          if invalid:
+              raise SystemExit(f"Anvil validation found {len(invalid)} invalid entries")
+          if len(regions) < 40:
+              raise SystemExit(f"Too few region files: {len(regions)}")
+          if populated < 10000:
+              raise SystemExit(f"Too few populated chunks: {populated}")
+          if size < 20_000_000:
+              raise SystemExit(f"World unexpectedly small: {size} bytes")
+          PY
 
       - name: Package world
         run: |
           set -euo pipefail
           WORLD_DIR="$(cat "$GITHUB_WORKSPACE/world_dir.txt")"
-          WORLD_NAME="$(basename "$WORLD_DIR")"
-          cd "$(dirname "$WORLD_DIR")"
+          WORLD_NAME="Gunung Bromo 1to1 Java Open World"
+          mv "$WORLD_DIR" "$GITHUB_WORKSPACE/generated/$WORLD_NAME"
+          cd "$GITHUB_WORKSPACE/generated"
           zip -0 -r "$GITHUB_WORKSPACE/Gunung_Bromo_1to1_Java_OpenWorld.zip" "$WORLD_NAME"
           cd "$GITHUB_WORKSPACE"
           sha256sum Gunung_Bromo_1to1_Java_OpenWorld.zip > Gunung_Bromo_1to1_Java_OpenWorld.sha256
+          unzip -t Gunung_Bromo_1to1_Java_OpenWorld.zip
           du -h Gunung_Bromo_1to1_Java_OpenWorld.zip
 
       - name: Upload world artifact
