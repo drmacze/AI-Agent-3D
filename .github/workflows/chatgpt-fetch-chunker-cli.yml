@@ -1,0 +1,30 @@
+name: ChatGPT Fetch Chunker CLI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-chunker-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and verify Chunker CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --show-error --silent --location \
+            https://github.com/HiveGamesOSS/Chunker/releases/download/1.19.1/chunker-cli-1.19.1.jar \
+            -o chunker-cli-1.19.1.jar
+          printf '%s  %s\n' '327662e8632acdb4571f60939206d605418ac0633741e1e5a58f5d6c6866dc74' 'chunker-cli-1.19.1.jar' | sha256sum -c -
+          java -jar chunker-cli-1.19.1.jar --version
+      - name: Upload verified CLI
+        uses: actions/upload-artifact@v4
+        with:
+          name: chunker-cli-1.19.1
+          path: chunker-cli-1.19.1.jar
+          compression-level: 0
+          retention-days: 1
