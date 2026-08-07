@@ -1,0 +1,132 @@
+name: ChatGPT Temporary Bromo World Build
+
+on:
+  push:
+    branches:
+      - chatgpt-bromo-build
+    paths:
+      - .github/workflows/chatgpt-bromo-build.yml
+
+permissions:
+  contents: read
+
+env:
+  ARNIS_COMMIT: d605b7f3d5d366e872c5271ead9d12393d2a295e
+  BBOX: "-7.961017927670477,112.93442549805327,-7.9239820558780005,112.97157450194673"
+  SPAWN_LAT: "-7.9425"
+  SPAWN_LNG: "112.9530"
+
+jobs:
+  build-bromo-world:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout temporary branch
+        uses: actions/checkout@v4
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl zip jq
+
+      - name: Checkout pinned Arnis source
+        run: |
+          git clone https://github.com/michalliu/louis-e_arnis.git arnis
+          cd arnis
+          git checkout "$ARNIS_COMMIT"
+
+      - name: Build Arnis CLI
+        working-directory: arnis
+        run: cargo build --release --no-default-features
+
+      - name: Generate real Bromo Java world
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/generated"
+          "$GITHUB_WORKSPACE/arnis/target/release/arnis" \
+            --terrain \
+            --output-dir "$GITHUB_WORKSPACE/generated" \
+            --bbox "$BBOX" \
+            --scale 1.0 \
+            --spawn-lat "$SPAWN_LAT" \
+            --spawn-lng "$SPAWN_LNG" \
+            --interior=false \
+            --roof=true \
+            --city-boundaries=false \
+            --downloader curl
+
+      - name: Add provenance and usage notes
+        run: |
+          set -euo pipefail
+          WORLD_DIR="$(find "$GITHUB_WORKSPACE/generated" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          if [ -z "$WORLD_DIR" ]; then
+            echo "Generated world directory not found" >&2
+            exit 1
+          fi
+          cat > "$WORLD_DIR/BACA_SAYA_BROMO.txt" <<'EOF'
+          GUNUNG BROMO — JAVA EDITION OPEN WORLD
+
+          Jenis: Minecraft Java Edition world (Anvil), Creative-ready
+          Skala horizontal: 1 blok = 1 meter
+          Area inti: sekitar 4.096 x 4.096 meter/blok
+          Pusat: Gunung Bromo, Jawa Timur
+          Sumber bentuk dunia: elevasi nyata + data OpenStreetMap, diproses oleh Arnis
+          Terrain dan objek tersimpan di chunk; bukan generator saat world dimainkan.
+
+          Koordinat geografis bbox:
+          -7.961017927670477,112.93442549805327 sampai
+          -7.9239820558780005,112.97157450194673
+
+          Cara pasang:
+          1. Ekstrak ZIP.
+          2. Salin folder world ke .minecraft/saves/
+          3. Buka dengan Minecraft Java Edition modern.
+          4. World dibuat untuk eksplorasi Creative. Versi Minecraft dapat melakukan upgrade data saat pertama dibuka.
+
+          Catatan penting:
+          Skala horizontal benar 1:1. Elevasi vertikal disesuaikan oleh generator agar muat dalam batas tinggi Minecraft.
+          EOF
+          printf '%s\n' "$WORLD_DIR" > "$GITHUB_WORKSPACE/world_dir.txt"
+
+      - name: Validate generated world
+        run: |
+          set -euo pipefail
+          WORLD_DIR="$(cat "$GITHUB_WORKSPACE/world_dir.txt")"
+          test -f "$WORLD_DIR/level.dat"
+          test -d "$WORLD_DIR/region"
+          REGION_COUNT="$(find "$WORLD_DIR/region" -type f -name 'r.*.*.mca' | wc -l)"
+          CHUNK_BYTES="$(du -sb "$WORLD_DIR" | cut -f1)"
+          if [ "$REGION_COUNT" -lt 4 ]; then
+            echo "Too few Anvil region files: $REGION_COUNT" >&2
+            exit 1
+          fi
+          if [ "$CHUNK_BYTES" -lt 1000000 ]; then
+            echo "World unexpectedly small: $CHUNK_BYTES bytes" >&2
+            exit 1
+          fi
+          echo "Region files: $REGION_COUNT"
+          echo "Uncompressed bytes: $CHUNK_BYTES"
+          find "$WORLD_DIR" -maxdepth 2 -type f | sort | head -n 100
+
+      - name: Package world
+        run: |
+          set -euo pipefail
+          WORLD_DIR="$(cat "$GITHUB_WORKSPACE/world_dir.txt")"
+          WORLD_NAME="$(basename "$WORLD_DIR")"
+          cd "$(dirname "$WORLD_DIR")"
+          zip -0 -r "$GITHUB_WORKSPACE/Gunung_Bromo_1to1_Java_OpenWorld.zip" "$WORLD_NAME"
+          cd "$GITHUB_WORKSPACE"
+          sha256sum Gunung_Bromo_1to1_Java_OpenWorld.zip > Gunung_Bromo_1to1_Java_OpenWorld.sha256
+          du -h Gunung_Bromo_1to1_Java_OpenWorld.zip
+
+      - name: Upload world artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gunung-Bromo-1to1-Java-OpenWorld
+          path: |
+            Gunung_Bromo_1to1_Java_OpenWorld.zip
+            Gunung_Bromo_1to1_Java_OpenWorld.sha256
+          compression-level: 0
+          retention-days: 2
+          if-no-files-found: error
