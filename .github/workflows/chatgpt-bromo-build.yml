@@ -1,10 +1,13 @@
-# Triggered temporary build; main branch is not modified.
+# Temporary build workflow. This branch is never merged into main.
 name: ChatGPT Temporary Bromo World Build
 
 on:
   push:
     branches:
       - chatgpt-bromo-build
+  pull_request:
+    branches:
+      - main
     paths:
       - .github/workflows/chatgpt-bromo-build.yml
 
