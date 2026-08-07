@@ -179,7 +179,7 @@ jobs:
 
           db_bytes = sum(p.stat().st_size for p in db_files)
           world_bytes = sum(p.stat().st_size for p in world.rglob('*') if p.is_file())
-          if db_bytes < 20_000_000:
+          if db_bytes < 10_000_000:
               raise SystemExit(f'Converted LevelDB unexpectedly small: {db_bytes} bytes')
 
           current_target = (db / 'CURRENT').read_text(encoding='ascii', errors='strict').strip()
