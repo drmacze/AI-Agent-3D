@@ -27,11 +27,40 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq zip unzip
 
-      - name: Reassemble scenic source bundle
+      - name: Repair and reassemble scenic source bundle
         shell: bash
         run: |
           set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+
+          path = Path('tmp_bromo_scenic/bundle10_07')
+          target = '6bf3b7e2b971325e90f392d0c060e040188fbd685fdaf54d1e39eb7e2b9dda18'
+          data = bytearray(path.read_bytes())
+          if hashlib.sha256(data).hexdigest() != target:
+              alphabet = b'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/='
+              found = False
+              for i, old in enumerate(data):
+                  for new in alphabet:
+                      if new == old:
+                          continue
+                      data[i] = new
+                      if hashlib.sha256(data).hexdigest() == target:
+                          print(f'Repaired bundle10_07 at byte {i}: {chr(old)} -> {chr(new)}')
+                          found = True
+                          break
+                  if found:
+                      break
+                  data[i] = old
+              if not found:
+                  raise SystemExit('Unable to deterministically repair bundle10_07')
+              path.write_bytes(data)
+          assert hashlib.sha256(path.read_bytes()).hexdigest() == target
+          PY
+          sha256sum tmp_bromo_scenic/bundle10_*
           cat tmp_bromo_scenic/bundle10_* | base64 -d > /tmp/bromo-scenic-bundle.tar.gz
+          printf '%s  %s\n' 'cc1cbff196fba2ef717994ff2259655938ee505fe89304ecb17763cd66633a36' /tmp/bromo-scenic-bundle.tar.gz | sha256sum -c -
           mkdir -p /tmp/bromo-scenic-bundle
           tar -xzf /tmp/bromo-scenic-bundle.tar.gz -C /tmp/bromo-scenic-bundle
           test -f /tmp/bromo-scenic-bundle/generate_bromo_scenic_java.py
