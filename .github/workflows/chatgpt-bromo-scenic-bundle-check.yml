@@ -1,0 +1,22 @@
+name: ChatGPT Bromo Scenic Bundle Check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check-parts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print part checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum tmp_bromo_scenic/bundle10_*
+          cat tmp_bromo_scenic/bundle10_* | base64 -d > /tmp/bundle.tar.gz
+          sha256sum /tmp/bundle.tar.gz
+          gzip -t /tmp/bundle.tar.gz
